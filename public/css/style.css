@@ -1,0 +1,93 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+body{
+    font-family:'Inter', sans-serif;
+}
+
+.text-success{
+    color:#00953B !important;
+}
+
+.border-success{
+    border-color:#00953B !important;
+}
+
+.badge.bg-success{
+    background-color:#00953B !important;
+}
+
+.welcome-page-body {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #f4fff7 0%, #eaf7ed 100%);
+}
+
+.welcome-card {
+    border-color: #dff2e4 !important;
+    margin-top: 6px;
+}
+
+.welcome-logo {
+    display: flex;
+    justify-content: center;
+}
+
+.welcome-logo img {
+    max-height: 180px;
+    width: auto;
+}
+
+.welcome-description {
+    color: #5f6b7a;
+    font-size: 1.02rem;
+    line-height: 1.7;
+    max-width: 720px;
+}
+
+.welcome-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.welcome-actions .btn {
+    min-width: 220px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.welcome-actions .modern-btn {
+    box-shadow: 0 10px 24px rgba(0, 149, 59, 0.15);
+}
+
+.welcome-actions .btn:hover {
+    transform: translateY(-2px);
+}
+
+.feature-box {
+    background: #f8fcf9;
+    border: 1px solid #e4f3e8;
+    border-radius: 16px;
+    padding: 16px;
+    height: 100%;
+}
+
+.feature-icon {
+    width: 42px;
+    height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    background: #e8f7eb;
+    font-size: 20px;
+    margin-bottom: 10px;
+}
+
+.btn-outline-success {
+    border-color: #00953B;
+    color: #00953B;
+}
+
+.btn-outline-success:hover {
+    background-color: #00953B;
+    color: #fff;
+}
