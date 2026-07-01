@@ -1,0 +1,262 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+/* ============================================================
+   RP Resource Centre — Brand Theme
+   Palette: Republic Polytechnic green + white + black
+   ------------------------------------------------------------
+   --rp-green        primary brand green (from RP logo)
+   --rp-green-dark   hover / depth
+   --rp-green-bright accent for gradients & highlights
+   --rp-ink          near-black for headings & strong text
+   ============================================================ */
+:root {
+    --rp-green: #00953B;
+    --rp-green-dark: #007530;
+    --rp-green-bright: #16c256;
+    --rp-ink: #10231a;
+    --rp-green-soft: #eef8f1;
+
+    /* Gold accent — used sparingly for eye-catching highlights */
+    --rp-gold: #f4b400;
+    --rp-gold-dark: #cc9600;
+    --rp-gold-soft: #fff6e0;
+
+    /* Retheme Bootstrap so `primary` == RP green (unifies buttons,
+       sidebar, links, borders that previously rendered blue). */
+    --bs-primary: #00953B;
+    --bs-primary-rgb: 0, 149, 59;
+    --bs-success: #00953B;
+    --bs-success-rgb: 0, 149, 59;
+    --bs-link-color: #00953B;
+    --bs-link-color-rgb: 0, 149, 59;
+    --bs-link-hover-color: #007530;
+    --bs-body-color: #23302a;
+    --bs-body-color-rgb: 35, 48, 42;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    color: var(--bs-body-color);
+}
+
+/* Headings lean toward black for strong contrast against green/white */
+h1, h2, h3, h4, h5, h6, .fw-bold {
+    color: var(--rp-ink);
+}
+
+/* ---------- Utility overrides ---------- */
+.text-success { color: var(--rp-green) !important; }
+.text-primary { color: var(--rp-green) !important; }
+.border-success { border-color: var(--rp-green) !important; }
+.border-primary { border-color: var(--rp-green) !important; }
+.badge.bg-success { background-color: var(--rp-green) !important; }
+/* Note: `.bg-primary` intentionally NOT hard-overridden — it derives from
+   --bs-primary-rgb above, so `bg-primary bg-opacity-10` tints stay correct. */
+
+/* ---------- Gold accent utilities (use sparingly) ---------- */
+.text-gold { color: var(--rp-gold-dark) !important; }
+.badge.bg-gold {
+    background-color: var(--rp-gold) !important;
+    color: var(--rp-ink) !important;
+}
+/* Gold-highlighted stat card — stands out among the green ones */
+.stat-gold {
+    border-left: 4px solid var(--rp-gold) !important;
+    background: linear-gradient(180deg, var(--rp-gold-soft) 0%, #ffffff 60%) !important;
+}
+.stat-gold h3 { color: var(--rp-gold-dark) !important; }
+
+/* ---------- Buttons ---------- */
+.btn-primary,
+.btn-success {
+    --bs-btn-bg: var(--rp-green);
+    --bs-btn-border-color: var(--rp-green);
+    --bs-btn-hover-bg: var(--rp-green-dark);
+    --bs-btn-hover-border-color: var(--rp-green-dark);
+    --bs-btn-active-bg: var(--rp-green-dark);
+    --bs-btn-active-border-color: var(--rp-green-dark);
+    --bs-btn-disabled-bg: var(--rp-green);
+    --bs-btn-disabled-border-color: var(--rp-green);
+    box-shadow: 0 8px 18px rgba(0, 149, 59, 0.18);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.btn-primary:hover,
+.btn-success:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 22px rgba(0, 149, 59, 0.28);
+}
+
+.btn-outline-primary,
+.btn-outline-success {
+    --bs-btn-color: var(--rp-green);
+    --bs-btn-border-color: var(--rp-green);
+    --bs-btn-hover-bg: var(--rp-green);
+    --bs-btn-hover-border-color: var(--rp-green);
+    --bs-btn-active-bg: var(--rp-green-dark);
+    --bs-btn-active-border-color: var(--rp-green-dark);
+}
+
+/* ---------- Navbar: white with a green brand underline ---------- */
+.navbar.bg-white {
+    border-bottom: 3px solid var(--rp-green) !important;
+    box-shadow: 0 2px 12px rgba(16, 35, 26, 0.05);
+}
+
+/* ---------- Sidebar links ---------- */
+aside a.text-primary {
+    color: var(--rp-ink) !important;
+}
+
+aside a:hover {
+    background-color: var(--rp-green-soft);
+    color: var(--rp-green) !important;
+}
+
+/* Active sidebar item: eye-catching green gradient */
+aside a.bg-primary {
+    background: linear-gradient(135deg, var(--rp-green) 0%, var(--rp-green-bright) 100%) !important;
+    color: #fff !important;
+    box-shadow: 0 6px 16px rgba(0, 149, 59, 0.30);
+}
+
+aside a.bg-primary:hover {
+    color: #fff !important;
+}
+
+/* ---------- Cards / surfaces ---------- */
+.rounded-4 {
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.border-success.border-start.border-4 {
+    border-left-color: var(--rp-green) !important;
+}
+
+/* Quick-action tiles lift on hover */
+main a.d-block:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 22px rgba(16, 35, 26, 0.10);
+    border-color: var(--rp-green) !important;
+}
+
+/* Focus ring in brand green */
+.form-control:focus {
+    border-color: var(--rp-green);
+    box-shadow: 0 0 0 0.2rem rgba(0, 149, 59, 0.18);
+}
+
+/* ---------- Login page ---------- */
+.login-page-body {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #f4fff7 0%, #eaf7ed 100%);
+}
+
+/* Branded login card: green→gold accent bar across the top */
+.login-card {
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 20px 55px rgba(16, 35, 26, 0.10) !important;
+}
+
+.login-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 5px;
+    background: linear-gradient(90deg, var(--rp-green) 0%, var(--rp-green-bright) 65%, var(--rp-gold) 100%);
+}
+
+.login-brand-badge {
+    width: 64px;
+    height: 64px;
+    border-radius: 18px;
+    background: linear-gradient(135deg, var(--rp-green) 0%, var(--rp-green-bright) 100%);
+    box-shadow: 0 10px 24px rgba(0, 149, 59, 0.28);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+}
+
+.login-brand-badge img {
+    max-height: 100%;
+    max-width: 100%;
+}
+
+/* ---------- Welcome / landing page ---------- */
+.welcome-page-body {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #f4fff7 0%, #eaf7ed 100%);
+}
+
+.welcome-card {
+    border-color: #dff2e4 !important;
+    margin-top: 6px;
+    box-shadow: 0 20px 60px rgba(16, 35, 26, 0.08);
+}
+
+.welcome-logo {
+    display: flex;
+    justify-content: center;
+}
+
+.welcome-logo img {
+    max-height: 180px;
+    width: auto;
+}
+
+.welcome-description {
+    color: #5f6b7a;
+    font-size: 1.02rem;
+    line-height: 1.7;
+    max-width: 720px;
+}
+
+.welcome-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.welcome-actions .btn {
+    min-width: 220px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.welcome-actions .modern-btn {
+    box-shadow: 0 10px 24px rgba(0, 149, 59, 0.15);
+}
+
+.welcome-actions .btn:hover {
+    transform: translateY(-2px);
+}
+
+.feature-box {
+    background: #f8fcf9;
+    border: 1px solid #e4f3e8;
+    border-radius: 16px;
+    padding: 16px;
+    height: 100%;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.feature-box:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 28px rgba(0, 149, 59, 0.12);
+}
+
+.feature-icon {
+    width: 42px;
+    height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    background: var(--rp-green-soft);
+    color: var(--rp-green);
+    font-size: 20px;
+    margin-bottom: 10px;
+}

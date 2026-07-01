@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="bg-light">
+
+<%- include("partials/navbar") %>
+
+<div class="d-flex gap-4 p-4 align-items-start">
+    <%- include("partials/sidebar") %>
+
+    <main class="flex-grow-1">
+
+        <!-- Page Header -->
+        <section class="bg-white border rounded-4 p-4 mb-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <div>
+                <span class="text-success fw-bold text-uppercase small">Account</span>
+                <h2 class="fw-bold my-2">My Profile</h2>
+                <p class="text-muted mb-0" style="max-width:560px;">View and manage your personal and account details.</p>
+            </div>
+        </section>
+
+        <section class="row g-3">
+
+            <!-- Profile Card -->
+            <div class="col-lg-4">
+                <div class="bg-white border rounded-4 p-4 text-center h-100 d-flex flex-column align-items-center">
+                    <div class="rounded-circle bg-success bg-opacity-10 text-success d-flex align-items-center justify-content-center mb-3" style="width:96px;height:96px;font-size:36px;">
+                        <i class="fa-solid fa-user"></i>
+                    </div>
+                    <h4 class="fw-bold mb-1"><%= student.name %></h4>
+                    <p class="text-muted small mb-3"><%= student.id %></p>
+                    <span class="badge bg-success rounded-pill px-3 py-2 mb-3">Active Student</span>
+                    <button type="button" class="btn btn-primary rounded-3 px-4 w-100" data-bs-toggle="modal" data-bs-target="#editProfileModal">
+                        <i class="fa-solid fa-pen me-2"></i>Edit Profile
+                    </button>
+                </div>
+            </div>
+
+            <!-- Details Card -->
+            <div class="col-lg-8">
+                <div class="bg-white border rounded-4 p-4 h-100">
+                    <h4 class="fw-bold mb-3">Personal Information</h4>
+
+                    <div class="row g-3">
+                        <div class="col-sm-6">
+                            <div class="bg-light border rounded-3 p-3 h-100">
+                                <p class="text-muted small mb-1">Full Name</p>
+                                <p class="fw-semibold mb-0"><%= student.name %></p>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="bg-light border rounded-3 p-3 h-100">
+                                <p class="text-muted small mb-1">Student ID</p>
+                                <p class="fw-semibold mb-0"><%= student.id %></p>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="bg-light border rounded-3 p-3 h-100">
+                                <p class="text-muted small mb-1">Course</p>
+                                <p class="fw-semibold mb-0"><%= student.course %></p>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="bg-light border rounded-3 p-3 h-100">
+                                <p class="text-muted small mb-1">Email</p>
+                                <p class="fw-semibold mb-0"><%= student.email %></p>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="bg-light border rounded-3 p-3 h-100">
+                                <p class="text-muted small mb-1">Phone</p>
+                                <p class="fw-semibold mb-0"><%= student.phone %></p>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="bg-light border rounded-3 p-3 h-100">
+                                <p class="text-muted small mb-1">Member Since</p>
+                                <p class="fw-semibold mb-0"><%= student.memberSince %></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Account Summary -->
+            <div class="col-12">
+                <div class="bg-white border rounded-4 p-4">
+                    <h4 class="fw-bold mb-3">Account Summary</h4>
+                    <div class="row g-3">
+                        <div class="col-6 col-lg-3">
+                            <div class="bg-white border rounded-4 p-3 border-start border-success border-4">
+                                <h3 class="fw-bold mb-1"><%= stats.loans %></h3>
+                                <p class="text-muted small mb-0">Current Loans</p>
+                            </div>
+                        </div>
+                        <div class="col-6 col-lg-3">
+                            <div class="bg-white border rounded-4 p-3 border-start border-secondary border-4">
+                                <h3 class="fw-bold mb-1"><%= stats.available %></h3>
+                                <p class="text-muted small mb-0">Available Devices</p>
+                            </div>
+                        </div>
+                        <div class="col-6 col-lg-3">
+                            <div class="bg-white border rounded-4 p-3 border-start border-warning border-4">
+                                <h3 class="fw-bold mb-1"><%= stats.dueSoon %></h3>
+                                <p class="text-muted small mb-0">Due Soon</p>
+                            </div>
+                        </div>
+                        <div class="col-6 col-lg-3">
+                            <div class="bg-white border rounded-4 p-3 border-start border-danger border-4">
+                                <h3 class="fw-bold mb-1"><%= stats.penalties %></h3>
+                                <p class="text-muted small mb-0">Penalties</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+    </main>
+</div>
+
+<!-- Edit Profile Modal -->
+<div class="modal fade" id="editProfileModal" tabindex="-1" aria-labelledby="editProfileLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0">
+            <form action="/profile" method="POST">
+                <div class="modal-header border-0">
+                    <h5 class="modal-title fw-bold" id="editProfileLabel">Edit Profile</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="name" class="form-label small text-muted">Full Name</label>
+                        <input type="text" class="form-control rounded-3" id="name" name="name" value="<%= student.name %>" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="course" class="form-label small text-muted">Course</label>
+                        <input type="text" class="form-control rounded-3" id="course" name="course" value="<%= student.course %>" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="email" class="form-label small text-muted">Email</label>
+                        <input type="email" class="form-control rounded-3" id="email" name="email" value="<%= student.email %>" required>
+                    </div>
+                    <div class="mb-0">
+                        <label for="phone" class="form-label small text-muted">Phone</label>
+                        <input type="text" class="form-control rounded-3" id="phone" name="phone" value="<%= student.phone %>" required>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-light rounded-3" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary rounded-3 px-4">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

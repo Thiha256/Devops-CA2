@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Log in as <%= role === 'admin' ? 'Admin' : 'Student' %> · RP Resource Centre</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="bg-light login-page-body">
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-md-6 col-lg-5">
+                <div class="text-center mb-4">
+                    <span class="login-brand-badge mb-3">
+                        <img src="/images/rp-logo.png" alt="Republic Polytechnic Logo">
+                    </span>
+                    <h5 class="fw-bold mt-1 mb-0">RP Resource Centre</h5>
+                    <small class="text-success fw-semibold">Republic Polytechnic</small>
+                </div>
+
+                <div class="card border-0 shadow-sm rounded-4 login-card">
+                    <div class="card-body p-4 p-md-5">
+                        <h4 class="fw-bold mb-1">
+                            Log in as <%= role === 'admin' ? 'an admin' : 'an RP student' %>
+                        </h4>
+                        <p class="text-muted small mb-4">
+                            Only <strong><%= role %></strong> accounts can sign in here.
+                        </p>
+
+                        <% if (error) { %>
+                            <div class="alert alert-danger py-2 small" role="alert"><%= error %></div>
+                        <% } %>
+
+                        <form action="/login/<%= role %>" method="POST">
+                            <div class="mb-3">
+                                <label class="form-label small fw-semibold">Email</label>
+                                <input type="email" name="email" class="form-control" required
+                                       value="<%= email || '' %>" placeholder="name@rp.edu.sg">
+                            </div>
+                            <div class="mb-4">
+                                <label class="form-label small fw-semibold">Password</label>
+                                <input type="password" name="password" class="form-control" required
+                                       placeholder="Enter your password">
+                            </div>
+                            <button type="submit"
+                                    class="btn <%= role === 'admin' ? 'btn-outline-success' : 'btn-success' %> w-100 rounded-pill py-2 fw-semibold">
+                                Log in
+                            </button>
+                        </form>
+
+                        <div class="text-center mt-4">
+                            <a href="/welcome" class="text-decoration-none small text-muted">&larr; Back to welcome</a>
+                            <span class="text-muted small mx-2">·</span>
+                            <a href="/login/<%= role === 'admin' ? 'student' : 'admin' %>" class="text-decoration-none small">
+                                Log in as <%= role === 'admin' ? 'student' : 'admin' %> instead
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-center text-muted mt-3" style="font-size:11.5px;">
+                    Demo: student &rarr; alice@rp.edu.sg / hash1 &nbsp;·&nbsp; admin &rarr; david@rp.edu.sg / hash4
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
