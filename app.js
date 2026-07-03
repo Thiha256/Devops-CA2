@@ -2,7 +2,8 @@ const express = require("express");
 const path = require("path");
 const session = require("express-session");
 
-const { getUserByEmail } = require("./models/userModel");
+const { getUserByEmail, getStudentSchool } = require("./models/userModel");
+const { getModelsWithStats, deleteModel, getModelById, updateModel } = require("./models/laptopModel");
 
 const app = express();
 
@@ -15,12 +16,12 @@ app.use(express.urlencoded({ extended: true }));
 app.use(session({
     secret: "rp-resource-centre-secret",
     resave: false,
-    saveUninitialized: false
+    saveUninitialized: false,
+    cookie: { maxAge: 1000 * 60 * 20 }
 }));
 
 // Sample data (fills in profile fields not stored in the DB)
 const sampleProfile = {
-    course: "Diploma in Information Technology",
     phone: "9123 4567",
     memberSince: "Jan 2025"
 };
@@ -53,26 +54,38 @@ const devices = [
 
 // Build the `student` object templates expect, from the logged-in session user.
 // Any profile edits made via the Edit Profile modal are stored per-session in
-// req.session.profile and merged in here.
-function currentStudent(req) {
+// req.session.profile and merged in here. School comes from the DB (admins have
+// no school_id, so schoolRow is null for them).
+async function currentStudent(req) {
     const u = req.session.user;
     const edits = req.session.profile || {};
+    const schoolRow = await getStudentSchool(u.id);
     return {
         name: edits.name || u.name,
         id: String(u.id),
         email: edits.email || u.email,
         role: u.role,
-        course: edits.course || sampleProfile.course,
+        school: edits.school || (schoolRow ? schoolRow.school_name : null),
         phone: edits.phone || sampleProfile.phone,
         memberSince: sampleProfile.memberSince
     };
 }
 
-// Redirect to welcome if not logged in.
-function requireLogin(req, res, next) {
-    if (!req.session.user) return res.redirect("/welcome");
-    next();
+// Redirect to welcome if not logged in; redirect to /home if logged in but wrong role.
+function requireRole(role) {
+    return function (req, res, next) {
+        if (!req.session.user) return res.redirect("/welcome");
+        // role is only truthy for requireAdmin (e.g. "admin"), so this only fires when
+        // a specific role was required AND the logged-in user's role doesn't match it.
+        if (role && req.session.user.role !== role) return res.redirect("/home");
+        next();
+    };
 }
+
+// role is omitted here, so it's undefined inside requireRole -> the role check is skipped
+// and this just enforces "logged in", regardless of role.
+const requireLogin = requireRole();
+const requireAdmin = requireRole("admin");
 
 // ---------- Public / auth routes ----------
 
@@ -125,8 +138,8 @@ app.post("/login/:role", async (req, res) => {
             role: user.role
         };
 
-        // Admins/staff land on Browse Devices; students land on the dashboard.
-        return res.redirect(user.role === "admin" ? "/browse" : "/home");
+        // admins land on the admin inventory page, students land on the dashboard.
+        return res.redirect(user.role === "admin" ? "/admin" : "/home");
     } catch (err) {
         console.error("Login error:", err.message);
         return render("Something went wrong. Please try again.");
@@ -139,12 +152,12 @@ app.get("/logout", (req, res) => {
 
 // ---------- Protected app routes ----------
 
-app.get("/home", requireLogin, (req, res) => {
-    res.render("index", { title: "RP Resource Centre", page: "dashboard", student: currentStudent(req), stats, loan });
+app.get("/home", requireLogin, async (req, res) => {
+    res.render("index", { title: "RP Resource Centre", page: "dashboard", student: await currentStudent(req), stats, loan });
 });
 
 // Browse now supports a search query via ?q= — ported from CA2.
-app.get("/browse", requireLogin, (req, res) => {
+app.get("/browse", requireLogin, async (req, res) => {
     const query = (req.query.q || "").trim();
     const q = query.toLowerCase();
 
@@ -157,29 +170,97 @@ app.get("/browse", requireLogin, (req, res) => {
           )
         : devices;
 
-    res.render("browse", { title: "Browse Devices", page: "browse", student: currentStudent(req), devices: results, query });
+    res.render("browse", { title: "Browse Devices", page: "browse", student: await currentStudent(req), devices: results, query });
 });
 
-app.get("/loans", requireLogin, (req, res) => {
-    res.render("loans", { title: "My Loans", page: "loans", student: currentStudent(req) });
+// root admin page
+app.get('/admin', requireAdmin, async (req, res) => {
+    const q = req.query.query || "";
+
+    const allModels = await getModelsWithStats();
+    const filteredModels = q
+        ? allModels.filter(model => model.name.toLowerCase().includes(q.toLowerCase()))
+        : allModels;
+
+    res.render('adminPage', {
+        page: 'inventory',
+        admin: req.session.user,
+        models: filteredModels,
+        query: q,
+        error: req.query.error || null
+    });
 });
 
-app.get("/penalties", requireLogin, (req, res) => {
-    res.render("penalties", { title: "Penalties", page: "penalties", student: currentStudent(req) });
+// Delete a model. Blocked by the DB's foreign keys if any laptops, school
+// assignments, or loan requests still reference it — surface that as an error.
+app.post('/admin/inventory/:id/delete', requireAdmin, async (req, res) => {
+    try {
+        await deleteModel(req.params.id);
+        res.redirect('/admin');
+    } catch (err) {
+        if (err.code === 'ER_ROW_IS_REFERENCED_2' || err.code === 'ER_ROW_IS_REFERENCED') {
+            res.redirect('/admin?error=' + encodeURIComponent(
+                'Cannot delete this model — it still has laptops, school assignments, or loan requests linked to it.'
+            ));
+        } else {
+            console.error('Delete model error:', err.message);
+            res.redirect('/admin?error=' + encodeURIComponent('Something went wrong deleting this model.'));
+        }
+    }
 });
 
-app.get("/profile", requireLogin, (req, res) => {
-    res.render("profile", { title: "Profile", page: "profile", student: currentStudent(req), stats, loan });
+// Edit model form, pre-filled with that one model's current details.
+app.get('/admin/inventory/:id/edit', requireAdmin, async (req, res) => {
+    const model = await getModelById(req.params.id);
+    if (!model) {
+        return res.redirect('/admin?error=' + encodeURIComponent('That model could not be found.'));
+    }
+    res.render('editModel', {
+        page: 'inventory',
+        admin: req.session.user,
+        model,
+        error: null
+    });
+});
+
+app.post('/admin/inventory/:id/edit', requireAdmin, async (req, res) => {
+    const { brand, model_name, cpu, ram, storage, graphics_type, image_url } = req.body;
+    try {
+        await updateModel(req.params.id, { brand, model_name, cpu, ram, storage, graphics_type, image_url });
+        res.redirect('/admin');
+    } catch (err) {
+        console.error('Update model error:', err.message);
+        const model = await getModelById(req.params.id);
+        res.render('editModel', {
+            page: 'inventory',
+            admin: req.session.user,
+            model: model || { id: req.params.id, brand, model_name, cpu, ram, storage, graphics_type, image_url },
+            error: 'Something went wrong updating this model.'
+        });
+    }
+});
+
+
+app.get("/loans", requireLogin, async (req, res) => {
+    res.render("loans", { title: "My Loans", page: "loans", student: await currentStudent(req) });
+});
+
+app.get("/penalties", requireLogin, async (req, res) => {
+    res.render("penalties", { title: "Penalties", page: "penalties", student: await currentStudent(req) });
+});
+
+app.get("/profile", requireLogin, async (req, res) => {
+    res.render("profile", { title: "Profile", page: "profile", student: await currentStudent(req), stats, loan });
 });
 
 // Handle profile edits from the Edit Profile modal — ported from CA2.
 // Edits are stored on the session so they persist for the logged-in user.
 app.post("/profile", requireLogin, (req, res) => {
-    const { name, course, email, phone } = req.body;
+    const { name, school, email, phone } = req.body;
     req.session.profile = {
         ...(req.session.profile || {}),
         ...(name ? { name: name.trim() } : {}),
-        ...(course ? { course: course.trim() } : {}),
+        ...(school ? { school: school.trim() } : {}),
         ...(email ? { email: email.trim() } : {}),
         ...(phone ? { phone: phone.trim() } : {})
     };
@@ -187,17 +268,17 @@ app.post("/profile", requireLogin, (req, res) => {
     res.redirect("/profile");
 });
 
-app.get("/support", requireLogin, (req, res) => {
+app.get("/support", requireLogin, async (req, res) => {
     res.render("support", {
         title: "Support",
         page: "support",
-        student: currentStudent(req),
+        student: await currentStudent(req),
         submitted: req.query.submitted === "true"
     });
 });
 
-app.post("/support", requireLogin, (req, res) => {
-    const student = currentStudent(req);
+app.post("/support", requireLogin, async (req, res) => {
+    const student = await currentStudent(req);
     const { subject, message } = req.body;
     console.log(`Support request received from ${student.name} (${student.id}): ${subject} - ${message}`);
     res.redirect("/support?submitted=true");
