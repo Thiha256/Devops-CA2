@@ -2,8 +2,9 @@ const express = require("express");
 const path = require("path");
 const session = require("express-session");
 
-const { getUserByEmail, getStudentSchool } = require("./models/userModel");
-const { getModelsWithStats, deleteModel, getModelById, updateModel } = require("./models/laptopModel");
+const { getUserByEmail } = require("./models/userModel");
+const { getModelsWithStats, getModelStatsById, deleteModel, getModelById, updateModel, createModel } = require("./models/laptopModel");
+const { getAssetsByModel } = require("./models/assetModel");
 
 const app = express();
 
@@ -17,7 +18,7 @@ app.use(session({
     secret: "rp-resource-centre-secret",
     resave: false,
     saveUninitialized: false,
-    cookie: { maxAge: 1000 * 60 * 20 }
+    cookie: { maxAge: 1000 * 60 * 60 }
 }));
 
 // Sample data (fills in profile fields not stored in the DB)
@@ -54,18 +55,17 @@ const devices = [
 
 // Build the `student` object templates expect, from the logged-in session user.
 // Any profile edits made via the Edit Profile modal are stored per-session in
-// req.session.profile and merged in here. School comes from the DB (admins have
-// no school_id, so schoolRow is null for them).
-async function currentStudent(req) {
+// req.session.profile and merged in here. School was fetched once at login and
+// cached on req.session.user (admins have no school, so it's null for them).
+function currentStudent(req) {
     const u = req.session.user;
     const edits = req.session.profile || {};
-    const schoolRow = await getStudentSchool(u.id);
     return {
         name: edits.name || u.name,
         id: String(u.id),
         email: edits.email || u.email,
         role: u.role,
-        school: edits.school || (schoolRow ? schoolRow.school_name : null),
+        school: edits.school || u.school,
         phone: edits.phone || sampleProfile.phone,
         memberSince: sampleProfile.memberSince
     };
@@ -135,7 +135,8 @@ app.post("/login/:role", async (req, res) => {
             id: user.user_id,
             name: user.name,
             email: user.email,
-            role: user.role
+            role: user.role,
+            school: user.school_name //admins have no school_id so this will be null for them
         };
 
         // admins land on the admin inventory page, students land on the dashboard.
@@ -153,7 +154,7 @@ app.get("/logout", (req, res) => {
 // ---------- Protected app routes ----------
 
 app.get("/home", requireLogin, async (req, res) => {
-    res.render("index", { title: "RP Resource Centre", page: "dashboard", student: await currentStudent(req), stats, loan });
+    res.render("index", { title: "RP Resource Centre", page: "dashboard", student: currentStudent(req), stats, loan });
 });
 
 // Browse now supports a search query via ?q= — ported from CA2.
@@ -170,7 +171,7 @@ app.get("/browse", requireLogin, async (req, res) => {
           )
         : devices;
 
-    res.render("browse", { title: "Browse Devices", page: "browse", student: await currentStudent(req), devices: results, query });
+    res.render("browse", { title: "Browse Devices", page: "browse", student: currentStudent(req), devices: results, query });
 });
 
 // root admin page
@@ -182,12 +183,12 @@ app.get('/admin', requireAdmin, async (req, res) => {
         ? allModels.filter(model => model.name.toLowerCase().includes(q.toLowerCase()))
         : allModels;
 
-    res.render('adminPage', {
+    res.render('admin/adminPage', {
         page: 'inventory',
         admin: req.session.user,
         models: filteredModels,
         query: q,
-        error: req.query.error || null
+        error: null
     });
 });
 
@@ -198,24 +199,103 @@ app.post('/admin/inventory/:id/delete', requireAdmin, async (req, res) => {
         await deleteModel(req.params.id);
         res.redirect('/admin');
     } catch (err) {
-        if (err.code === 'ER_ROW_IS_REFERENCED_2' || err.code === 'ER_ROW_IS_REFERENCED') {
-            res.redirect('/admin?error=' + encodeURIComponent(
-                'Cannot delete this model — it still has laptops, school assignments, or loan requests linked to it.'
-            ));
-        } else {
+        const isReferenced = err.code === 'ER_ROW_IS_REFERENCED_2';
+        if (!isReferenced) {
             console.error('Delete model error:', err.message);
-            res.redirect('/admin?error=' + encodeURIComponent('Something went wrong deleting this model.'));
         }
+        const error = isReferenced
+            ? 'Cannot delete this model. It still has laptops, school assignments, or loan requests linked to it.'
+            : 'Something went wrong deleting this model.';
+
+        const allModels = await getModelsWithStats();
+        res.render('admin/adminPage', {
+            page: 'inventory',
+            admin: req.session.user,
+            models: allModels,
+            query: '',
+            error
+        });
     }
+});
+
+// Add model form. Shares modelForm.ejs with the edit form — an id-less
+// model object tells the template to render as "Add" and POST to /new.
+app.get('/admin/inventory/new', requireAdmin, (req, res) => {
+    res.render('admin/modelForm', {
+        page: 'inventory',
+        admin: req.session.user,
+        model: {},
+        error: null
+    });
+});
+
+app.post('/admin/inventory/new', requireAdmin, async (req, res) => {
+    const { brand, model_name, cpu, ram, storage, graphics_type, image_url } = req.body;
+    try {
+        await createModel({ brand, model_name, cpu, ram, storage, graphics_type, image_url });
+        res.redirect('/admin');
+    } catch (err) {
+        console.error('Create model error:', err.message);
+        res.render('admin/modelForm', {
+            page: 'inventory',
+            admin: req.session.user,
+            model: { brand, model_name, cpu, ram, storage, graphics_type, image_url },
+            error: 'Something went wrong adding this model.'
+        });
+    }
+});
+
+// Per-model asset manager: lists every physical laptop unit for one model,
+// with optional serial/asset id search and status filter.
+app.get('/admin/inventory/:id', requireAdmin, async (req, res) => {
+    const model = await getModelStatsById(req.params.id);
+    if (!model) {
+        const allModels = await getModelsWithStats();
+        return res.render('admin/adminPage', {
+            page: 'inventory',
+            admin: req.session.user,
+            models: allModels,
+            query: '',
+            error: 'That model could not be found.'
+        });
+    }
+
+    const query = req.query.q || "";
+    const status = req.query.status || "";
+
+    const allAssets = await getAssetsByModel(req.params.id);
+    const assets = allAssets.filter(asset => {
+        const matchesQuery = !query ||
+            asset.asset_id.toLowerCase().includes(query.toLowerCase()) ||
+            asset.serial_no.toLowerCase().includes(query.toLowerCase());
+        const matchesStatus = !status || asset.status === status;
+        return matchesQuery && matchesStatus;
+    });
+
+    res.render('admin/modelAssets', {
+        page: 'inventory',
+        admin: req.session.user,
+        model,
+        assets,
+        query,
+        status
+    });
 });
 
 // Edit model form, pre-filled with that one model's current details.
 app.get('/admin/inventory/:id/edit', requireAdmin, async (req, res) => {
     const model = await getModelById(req.params.id);
     if (!model) {
-        return res.redirect('/admin?error=' + encodeURIComponent('That model could not be found.'));
+        const allModels = await getModelsWithStats();
+        return res.render('admin/adminPage', {
+            page: 'inventory',
+            admin: req.session.user,
+            models: allModels,
+            query: '',
+            error: 'That model could not be found.'
+        });
     }
-    res.render('editModel', {
+    res.render('admin/modelForm', {
         page: 'inventory',
         admin: req.session.user,
         model,
@@ -231,7 +311,7 @@ app.post('/admin/inventory/:id/edit', requireAdmin, async (req, res) => {
     } catch (err) {
         console.error('Update model error:', err.message);
         const model = await getModelById(req.params.id);
-        res.render('editModel', {
+        res.render('admin/modelForm', {
             page: 'inventory',
             admin: req.session.user,
             model: model || { id: req.params.id, brand, model_name, cpu, ram, storage, graphics_type, image_url },
@@ -242,15 +322,15 @@ app.post('/admin/inventory/:id/edit', requireAdmin, async (req, res) => {
 
 
 app.get("/loans", requireLogin, async (req, res) => {
-    res.render("loans", { title: "My Loans", page: "loans", student: await currentStudent(req) });
+    res.render("loans", { title: "My Loans", page: "loans", student: currentStudent(req) });
 });
 
 app.get("/penalties", requireLogin, async (req, res) => {
-    res.render("penalties", { title: "Penalties", page: "penalties", student: await currentStudent(req) });
+    res.render("penalties", { title: "Penalties", page: "penalties", student: currentStudent(req) });
 });
 
 app.get("/profile", requireLogin, async (req, res) => {
-    res.render("profile", { title: "Profile", page: "profile", student: await currentStudent(req), stats, loan });
+    res.render("profile", { title: "Profile", page: "profile", student: currentStudent(req), stats, loan });
 });
 
 // Handle profile edits from the Edit Profile modal — ported from CA2.
@@ -272,13 +352,13 @@ app.get("/support", requireLogin, async (req, res) => {
     res.render("support", {
         title: "Support",
         page: "support",
-        student: await currentStudent(req),
+        student: currentStudent(req),
         submitted: req.query.submitted === "true"
     });
 });
 
 app.post("/support", requireLogin, async (req, res) => {
-    const student = await currentStudent(req);
+    const student = currentStudent(req);
     const { subject, message } = req.body;
     console.log(`Support request received from ${student.name} (${student.id}): ${subject} - ${message}`);
     res.redirect("/support?submitted=true");

@@ -48,10 +48,9 @@
                 </div>
             </form>
 
-            <!-- Triggers your Add Model Modal/Offcanvas -->
-            <button class="btn btn-success text-nowrap fw-bold" data-bs-toggle="modal" data-bs-target="#addModelModal">
+            <a href="/admin/inventory/new" class="btn btn-success text-nowrap fw-bold">
                 <i class="fa-solid fa-plus me-1"></i> Add Model
-            </button>
+            </a>
         </div>
     </header>
 
@@ -68,7 +67,7 @@
         <!-- MODEL CARDS GRID -->
         <section class="row g-4">
             <% models.forEach(function(model) { %>
-                <div class="col-md-6 col-lg-4">
+                <div class="col-12 col-md-6 col-lg-4">
                     <div class="bg-white border rounded-4 p-4 h-100 text-center shadow-sm d-flex flex-column position-relative">
 
                         <!-- Card Options Menu -->
@@ -89,8 +88,12 @@
                             </ul>
                         </div>
 
-                        <!-- Icon & Core Info -->
-                        <i class="fa-solid <%= model.icon || 'fa-laptop' %> fa-4x text-success mb-3"></i>
+                        <!-- Image & Core Info -->
+                        <% if (model.image_url) { %>
+                            <img src="<%= model.image_url %>" alt="<%= model.name %>" class="mx-auto mb-3" style="height:100px; object-fit:contain;">
+                        <% } else { %>
+                            <i class="fa-solid fa-laptop fa-4x text-success mb-3"></i>
+                        <% } %>
                         <h5 class="fw-bold mb-1"><%= model.name %></h5>
                         <p class="text-muted small mb-3"><%= model.specs %></p>
                         

@@ -14,6 +14,9 @@
 <div class="d-flex gap-4 p-4 align-items-start">
     <%- include("partials/adminSidebar") %>
 
+    <!-- No id means this is a blank model passed in for the Add form; same template serves both. -->
+    <% const isNew = !model.id; %>
+
     <main class="container py-4">
 
         <% if (error) { %>
@@ -25,11 +28,11 @@
 
         <header class="bg-white border rounded-4 p-4 mb-4">
             <span class="text-success fw-bold text-uppercase small">Inventory Management</span>
-            <h2 class="fw-bold my-1">Edit Model</h2>
+            <h2 class="fw-bold my-1"><%= isNew ? 'Add Model' : 'Edit Model' %></h2>
         </header>
 
         <section class="bg-white border rounded-4 p-4">
-            <form action="/admin/inventory/<%= model.id %>/edit" method="POST" class="row g-3">
+            <form action="<%= isNew ? '/admin/inventory/new' : '/admin/inventory/' + model.id + '/edit' %>" method="POST" class="row g-3">
                 <div class="col-md-6">
                     <label class="form-label fw-semibold small">Brand</label>
                     <input type="text" name="brand" class="form-control" value="<%= model.brand %>" required>
@@ -66,7 +69,7 @@
                 </div>
 
                 <div class="col-12 d-flex gap-2 mt-4">
-                    <button type="submit" class="btn btn-success fw-bold px-4">Save Changes</button>
+                    <button type="submit" class="btn btn-success fw-bold px-4"><%= isNew ? 'Add Model' : 'Save Changes' %></button>
                     <a href="/admin" class="btn btn-outline-secondary px-4">Cancel</a>
                 </div>
             </form>

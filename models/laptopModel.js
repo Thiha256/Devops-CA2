@@ -8,6 +8,7 @@ async function getModelsWithStats() {
             lm.model_id AS id,
             CONCAT(lm.brand, ' ', lm.model_name) AS name,
             CONCAT(lm.cpu, ', ', lm.ram, 'GB RAM, ', lm.storage, 'GB SSD') AS specs,
+            lm.image_url,
             COUNT(l.laptop_id) AS totalAssets,
             SUM(l.status = 'available') AS availableAssets,
             SUM(l.status = 'on loan') AS loanedAssets,
@@ -18,6 +19,28 @@ async function getModelsWithStats() {
         ORDER BY lm.brand, lm.model_name`
     );
     return rows;
+}
+
+// Same shape as getModelsWithStats, scoped to one model — used for the
+// asset manager page header.
+async function getModelStatsById(id) {
+    const [rows] = await db.execute(`
+        SELECT
+            lm.model_id AS id,
+            CONCAT(lm.brand, ' ', lm.model_name) AS name,
+            CONCAT(lm.cpu, ', ', lm.ram, 'GB RAM, ', lm.storage, 'GB SSD') AS specs,
+            lm.image_url,
+            COUNT(l.laptop_id) AS totalAssets,
+            SUM(l.status = 'available') AS availableAssets,
+            SUM(l.status = 'on loan') AS loanedAssets,
+            SUM(l.status = 'maintenance') AS maintenanceAssets
+        FROM laptop_model lm
+        LEFT JOIN laptop l ON l.model_id = lm.model_id
+        WHERE lm.model_id = ?
+        GROUP BY lm.model_id`,
+        [id]
+    );
+    return rows[0] || null;
 }
 
 // Delete a model. Throws (mysql error code ER_ROW_IS_REFERENCED_2) if any
@@ -46,4 +69,13 @@ async function updateModel(modelId, { brand, model_name, cpu, ram, storage, grap
     );
 }
 
-module.exports = { getModelsWithStats, deleteModel, getModelById, updateModel };
+async function createModel({ brand, model_name, cpu, ram, storage, graphics_type, image_url }) {
+    const [result] = await db.execute(`
+        INSERT INTO laptop_model (brand, model_name, cpu, ram, storage, graphics_type, image_url)
+        VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [brand, model_name, cpu, ram, storage, graphics_type, image_url]
+    );
+    return result.insertId;
+}
+
+module.exports = { getModelsWithStats, getModelStatsById, deleteModel, getModelById, updateModel, createModel };
