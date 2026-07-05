@@ -43,13 +43,14 @@ const loan = {
 function currentStudent(req) {
     const u = req.session.user;
     const edits = req.session.profile || {};
+
     return {
         name: edits.name || u.name,
         id: String(u.id),
         email: edits.email || u.email,
         role: u.role,
-        course: edits.course || sampleProfile.course,
-        school: sampleProfile.school,
+        course: edits.course || u.course || sampleProfile.course,
+        school: edits.school || u.school || sampleProfile.school,
         phone: edits.phone || sampleProfile.phone,
         memberSince: sampleProfile.memberSince
     };
@@ -101,7 +102,9 @@ app.post("/login/:role", async (req, res) => {
             id: user.user_id,
             name: user.name,
             email: user.email,
-            role: user.role
+            role: user.role,
+            school: user.school || user.school_name || sampleProfile.school,
+            course: user.course || user.course_name || user.diploma || sampleProfile.course
         };
 
         return res.redirect(user.role === "admin" ? "/browse" : "/home");
@@ -116,17 +119,23 @@ app.get("/logout", (req, res) => {
 });
 
 app.get("/home", requireLogin, (req, res) => {
-    res.render("index", { title: "RP Resource Centre", page: "dashboard", student: currentStudent(req), stats, loan });
+    res.render("index", {
+        title: "RP Resource Centre",
+        page: "dashboard",
+        student: currentStudent(req),
+        stats,
+        loan
+    });
 });
 
-app.get("/browse", requireLogin, (req, res) => {
+app.get("/browse", requireLogin, async (req, res) => {
     const student = currentStudent(req);
     const query = (req.query.q || "").trim();
     const q = query.toLowerCase();
 
     let models = student.role === "admin"
-        ? loanModel.getAllModels()
-        : loanModel.getModelsForSchool(student.school);
+        ? await loanModel.getAllModels()
+        : await loanModel.getModelsForSchool(student.school);
 
     if (q) {
         models = models.filter(m =>
@@ -147,7 +156,7 @@ app.get("/browse", requireLogin, (req, res) => {
     });
 });
 
-app.post("/loans/request", requireLogin, (req, res) => {
+app.post("/loans/request", requireLogin, async (req, res) => {
     const student = currentStudent(req);
 
     if (student.role === "admin") {
@@ -156,72 +165,105 @@ app.post("/loans/request", requireLogin, (req, res) => {
         ));
     }
 
-    const { model_id, reason, remarks, start_date } = req.body;
+    const { model_id, reason, remarks } = req.body;
 
-    const result = loanModel.createLoanRequest(
-        req.session.user.id, student.school, model_id, reason, remarks, start_date
+    const result = await loanModel.createLoanRequest(
+        req.session.user.id,
+        student.school,
+        model_id,
+        reason,
+        remarks
     );
 
     if (!result.ok) {
         return res.redirect("/browse?error=" + encodeURIComponent(result.error));
     }
+
     return res.redirect("/loans?success=" + encodeURIComponent(
         "Loan request submitted! You'll see it as Pending until an admin approves it."
     ));
 });
 
-app.get("/loans", requireLogin, (req, res) => {
+app.get("/loans", requireLogin, async (req, res) => {
     const userId = req.session.user.id;
+    const student = currentStudent(req);
+
+    const requests = student.role === "admin"
+        ? await loanModel.getAllRequests()
+        : await loanModel.getRequestsByUser(userId);
+
+    const loans = student.role === "admin"
+        ? await loanModel.getAllLoans()
+        : await loanModel.getLoansByUser(userId);
+
     res.render("loans", {
         title: "My Loans",
         page: "loans",
-        student: currentStudent(req),
-        requests: loanModel.getRequestsByUser(userId),
-        loans: loanModel.getLoansByUser(userId),
+        student,
+        requests,
+        loans,
         error: req.query.error || null,
         success: req.query.success || null
     });
 });
 
-app.post("/loans/request/:id/cancel", requireLogin, (req, res) => {
-    const result = loanModel.cancelRequest(req.session.user.id, req.params.id);
+app.post("/loans/request/:id/cancel", requireLogin, async (req, res) => {
+    const result = await loanModel.cancelRequest(req.session.user.id, req.params.id);
+
     const msg = result.ok
         ? "success=" + encodeURIComponent("Request cancelled.")
         : "error=" + encodeURIComponent(result.error);
+
     res.redirect("/loans?" + msg);
 });
 
-app.post("/loans/:id/return", requireLogin, (req, res) => {
-    const result = loanModel.returnLoan(req.session.user.id, req.params.id);
+app.post("/loans/:id/return", requireLogin, async (req, res) => {
+    const result = await loanModel.returnLoan(req.session.user.id, req.params.id);
+
     const msg = result.ok
         ? "success=" + encodeURIComponent("Laptop returned. Thank you!")
         : "error=" + encodeURIComponent(result.error);
+
     res.redirect("/loans?" + msg);
 });
 
-app.post("/dev/requests/:id/approve", requireLogin, (req, res) => {
+app.post("/dev/requests/:id/approve", requireLogin, async (req, res) => {
     if (req.session.user.role !== "admin") {
         return res.redirect("/loans?error=" + encodeURIComponent(
             "Only admins can approve loan requests."
         ));
     }
-    const result = loanModel.approveRequest(req.params.id);
+
+    const result = await loanModel.approveRequest(req.params.id, req.session.user.id);
+
     const msg = result.ok
-        ? "success=" + encodeURIComponent("Request approved — loan created, due in 1 month.")
+        ? "success=" + encodeURIComponent("Request approved — loan created.")
         : "error=" + encodeURIComponent(result.error);
+
     res.redirect("/loans?" + msg);
 });
 
 app.get("/penalties", requireLogin, (req, res) => {
-    res.render("penalties", { title: "Penalties", page: "penalties", student: currentStudent(req) });
+    res.render("penalties", {
+        title: "Penalties",
+        page: "penalties",
+        student: currentStudent(req)
+    });
 });
 
 app.get("/profile", requireLogin, (req, res) => {
-    res.render("profile", { title: "Profile", page: "profile", student: currentStudent(req), stats, loan });
+    res.render("profile", {
+        title: "Profile",
+        page: "profile",
+        student: currentStudent(req),
+        stats,
+        loan
+    });
 });
 
 app.post("/profile", requireLogin, (req, res) => {
     const { name, course, email, phone } = req.body;
+
     req.session.profile = {
         ...(req.session.profile || {}),
         ...(name ? { name: name.trim() } : {}),
@@ -229,6 +271,7 @@ app.post("/profile", requireLogin, (req, res) => {
         ...(email ? { email: email.trim() } : {}),
         ...(phone ? { phone: phone.trim() } : {})
     };
+
     console.log(`Profile updated for ${req.session.user.id}:`, req.session.profile);
     res.redirect("/profile");
 });
@@ -245,11 +288,13 @@ app.get("/support", requireLogin, (req, res) => {
 app.post("/support", requireLogin, (req, res) => {
     const student = currentStudent(req);
     const { subject, message } = req.body;
+
     console.log(`Support request received from ${student.name} (${student.id}): ${subject} - ${message}`);
     res.redirect("/support?submitted=true");
 });
 
 const PORT = 3001;
+
 app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
 });
