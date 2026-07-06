@@ -19,7 +19,6 @@
         <section class="bg-white border rounded-4 p-4 mb-4">
             <span class="text-success fw-bold text-uppercase small">Laptop Loans</span>
             <h2 class="fw-bold my-2">Browse Laptop Models</h2>
-
             <% if (query) { %>
                 <p class="text-muted mb-0">
                     Showing <strong><%= models.length %></strong>
@@ -39,31 +38,21 @@
         </section>
 
         <% if (error) { %>
-            <div class="alert alert-danger rounded-4">
-                <i class="fa-solid fa-circle-exclamation me-2"></i><%= error %>
-            </div>
+            <div class="alert alert-danger rounded-4"><i class="fa-solid fa-circle-exclamation me-2"></i><%= error %></div>
         <% } %>
-
         <% if (success) { %>
-            <div class="alert alert-success rounded-4">
-                <i class="fa-solid fa-circle-check me-2"></i><%= success %>
-            </div>
+            <div class="alert alert-success rounded-4"><i class="fa-solid fa-circle-check me-2"></i><%= success %></div>
         <% } %>
 
         <% if (models.length === 0) { %>
             <section class="bg-white border rounded-4 p-5 text-center">
                 <i class="fa-solid fa-magnifying-glass fa-3x text-muted mb-3"></i>
                 <h5 class="fw-bold mb-1">No models found</h5>
-
                 <% if (query) { %>
-                    <p class="text-muted mb-3">
-                        We couldn't find anything matching "<strong><%= query %></strong>".
-                    </p>
+                    <p class="text-muted mb-3">We couldn't find anything matching "<strong><%= query %></strong>".</p>
                     <a href="/browse" class="btn btn-primary rounded-3 px-4">View all models</a>
                 <% } else { %>
-                    <p class="text-muted mb-0">
-                        No laptop models are currently available to your school.
-                    </p>
+                    <p class="text-muted mb-0">No laptop models are currently available to your school.</p>
                 <% } %>
             </section>
         <% } else { %>
@@ -71,33 +60,28 @@
                 <% models.forEach(function(model) { %>
                     <div class="col-md-4">
                         <div class="bg-white border rounded-4 p-4 h-100 text-center d-flex flex-column">
-                            <i class="fa-solid <%= model.icon %> fa-4x text-primary mb-3"></i>
-
+                            <img src="<%= model.image_url %>" alt="<%= model.name %>"
+                                 referrerpolicy="no-referrer"
+                                 class="mb-3 mx-auto d-block" style="height: 120px; object-fit: contain;"
+                                 onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                            <i class="fa-solid fa-laptop fa-4x text-primary mb-3" style="display:none;"></i>
                             <h5 class="fw-bold"><%= model.name %></h5>
                             <p class="text-muted small mb-2"><%= model.specs %></p>
 
                             <div class="mb-3">
                                 <% if (model.available > 0) { %>
-                                    <span class="badge bg-success rounded-pill">
-                                        <%= model.available %> in stock
-                                    </span>
+                                    <span class="badge bg-success rounded-pill"><%= model.available %> in stock</span>
                                 <% } else { %>
-                                    <span class="badge bg-secondary rounded-pill">
-                                        Out of stock
-                                    </span>
+                                    <span class="badge bg-secondary rounded-pill">Out of stock</span>
                                 <% } %>
-
                                 <% if (model.pending > 0) { %>
-                                    <span class="badge bg-warning text-dark rounded-pill">
-                                        <%= model.pending %> pending request<%= model.pending === 1 ? "" : "s" %>
-                                    </span>
+                                    <span class="badge bg-warning text-dark rounded-pill"><%= model.pending %> pending request<%= model.pending === 1 ? "" : "s" %></span>
                                 <% } %>
                             </div>
 
                             <% if (student.role === "admin") { %>
                                 <p class="text-muted small mb-0 mt-auto">
-                                    <strong>Available to schools:</strong>
-                                    <%= model.schools.join(", ") %>
+                                    Available to: <%= model.schools %>
                                 </p>
                             <% } else { %>
                                 <div class="mt-auto">
@@ -125,12 +109,9 @@
     <div class="modal-dialog">
         <form class="modal-content rounded-4" method="POST" action="/loans/request">
             <div class="modal-header">
-                <h5 class="modal-title fw-bold">
-                    Request Loan — <span id="loanModalModelName"></span>
-                </h5>
+                <h5 class="modal-title fw-bold">Request Loan — <span id="loanModalModelName"></span></h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-
             <div class="modal-body">
                 <input type="hidden" name="model_id" id="loanModalModelId">
 
@@ -138,46 +119,25 @@
                     <label for="loanReason" class="form-label fw-semibold">Reason for loan</label>
                     <select class="form-select" id="loanReason" name="reason" required>
                         <option value="" selected disabled>Select a reason…</option>
-
                         <% Object.keys(reasons).forEach(function(key) { %>
                             <option value="<%= key %>"><%= reasons[key] %></option>
                         <% }); %>
                     </select>
                 </div>
 
-                <div class="mb-3">
-                    <label for="loanStartDate" class="form-label fw-semibold">Start Date</label>
-                    <input type="date" class="form-control" id="loanStartDate" name="start_date" required>
-                    <div class="form-text">
-                        When you'd like the loan to start. Loans last up to 1 month.
-                    </div>
-                </div>
-
                 <div class="mb-2">
-                    <label for="loanRemarks" class="form-label fw-semibold">
-                        Remarks <span class="text-danger">*</span>
-                    </label>
-                    <textarea class="form-control"
-                              id="loanRemarks"
-                              name="remarks"
-                              rows="3"
-                              required
+                    <label for="loanRemarks" class="form-label fw-semibold">Remarks <span class="text-danger">*</span></label>
+                    <textarea class="form-control" id="loanRemarks" name="remarks" rows="3" required
                               placeholder="Briefly explain your situation (required)"></textarea>
-
                     <div class="form-text">
                         Note: if your laptop is under maintenance, proof (e.g. repair receipt)
                         must be shown in person at the Resource Centre.
                     </div>
                 </div>
             </div>
-
             <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary rounded-3" data-bs-dismiss="modal">
-                    Cancel
-                </button>
-                <button type="submit" class="btn btn-primary rounded-3 px-4">
-                    Submit Request
-                </button>
+                <button type="button" class="btn btn-outline-secondary rounded-3" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-primary rounded-3 px-4">Submit Request</button>
             </div>
         </form>
     </div>
@@ -185,25 +145,13 @@
 <% } %>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-
 <% if (student.role !== "admin") { %>
 <script>
     const loanModal = document.getElementById("loanRequestModal");
-
     loanModal.addEventListener("show.bs.modal", function (event) {
         const button = event.relatedTarget;
-
         document.getElementById("loanModalModelId").value = button.getAttribute("data-model-id");
         document.getElementById("loanModalModelName").textContent = button.getAttribute("data-model-name");
-
-        const startInput = document.getElementById("loanStartDate");
-        const today = new Date().toLocaleDateString("en-CA");
-
-        startInput.min = today;
-
-        if (!startInput.value) {
-            startInput.value = today;
-        }
     });
 </script>
 <% } %>
