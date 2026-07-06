@@ -6,6 +6,7 @@ const bcrypt = require("bcryptjs");
 const { getUserByEmail } = require("./models/userModel");
 const { getModelsWithStats, getModelStatsById, deleteModel, getModelById, updateModel, createModel } = require("./models/laptopModel");
 const { getAssetsByModel } = require("./models/assetModel");
+const loanModel = require("./models/loanModel");
 
 const app = express();
 
@@ -24,6 +25,8 @@ app.use(session({
 
 // Sample data (fills in profile fields not stored in the DB)
 const sampleProfile = {
+    course: "Diploma in Information Technology",
+    school: "SOI",
     phone: "9123 4567",
     memberSince: "Jan 2025"
 };
@@ -42,18 +45,6 @@ const loan = {
     daysRemaining: 5
 };
 
-// Device catalogue (searchable) — ported from CA2
-const devices = [
-    { name: "Lenovo ThinkPad X13", specs: "Intel i5, 16GB RAM, 512GB SSD", status: "Available", category: "Laptop", icon: "fa-laptop" },
-    { name: "Dell Latitude 5440",  specs: "Intel i7, 16GB RAM, 512GB SSD", status: "Available", category: "Laptop", icon: "fa-laptop" },
-    { name: "HP EliteBook 840",    specs: "Intel i5, 8GB RAM, 256GB SSD",  status: "Limited",   category: "Laptop", icon: "fa-laptop" },
-    { name: "MacBook Air M2",      specs: "Apple M2, 8GB RAM, 256GB SSD",  status: "Available", category: "Laptop", icon: "fa-laptop" },
-    { name: "Canon EOS 200D",      specs: "24MP DSLR, 18-55mm lens",       status: "Available", category: "Camera", icon: "fa-camera" },
-    { name: "Logitech C920 Webcam",specs: "1080p HD Webcam",               status: "Limited",   category: "Camera", icon: "fa-video" },
-    { name: "USB-C Charger 65W",   specs: "Fast-charging power adapter",   status: "Available", category: "Charger", icon: "fa-plug" },
-    { name: "HDMI Cable 2m",       specs: "4K 60Hz HDMI cable",            status: "Available", category: "Accessory", icon: "fa-plug" }
-];
-
 // Build the `student` object templates expect, from the logged-in session user.
 // Any profile edits made via the Edit Profile modal are stored per-session in
 // req.session.profile and merged in here. School was fetched once at login and
@@ -61,12 +52,14 @@ const devices = [
 function currentStudent(req) {
     const u = req.session.user;
     const edits = req.session.profile || {};
+
     return {
         name: edits.name || u.name,
         id: String(u.id),
         email: edits.email || u.email,
         role: u.role,
-        school: edits.school || u.school,
+        course: edits.course || u.course || sampleProfile.course,
+        school: edits.school || u.school || sampleProfile.school,
         phone: edits.phone || sampleProfile.phone,
         memberSince: sampleProfile.memberSince
     };
@@ -137,7 +130,7 @@ app.post("/login/:role", async (req, res) => {
             name: user.name,
             email: user.email,
             role: user.role,
-            school: user.school_name //admins have no school_id so this will be null for them
+            school: user.school_name // admins have no school_id so this will be null for them
         };
 
         // admins land on the admin inventory page, students land on the dashboard.
@@ -158,22 +151,37 @@ app.get("/home", requireLogin, async (req, res) => {
     res.render("index", { title: "RP Resource Centre", page: "dashboard", student: currentStudent(req), stats, loan });
 });
 
-// Browse now supports a search query via ?q= — ported from CA2.
+// Browse loanable laptop models. Admins see every model; students see only the
+// models available to their school. Supports a search query via ?q=.
 app.get("/browse", requireLogin, async (req, res) => {
+    const student = currentStudent(req);
     const query = (req.query.q || "").trim();
     const q = query.toLowerCase();
 
-    // Filter by name, specs or category; empty query shows everything.
-    const results = q
-        ? devices.filter(d =>
-            d.name.toLowerCase().includes(q) ||
-            d.specs.toLowerCase().includes(q) ||
-            d.category.toLowerCase().includes(q)
-          )
-        : devices;
+    let models = student.role === "admin"
+        ? await loanModel.getAllModels()
+        : await loanModel.getModelsForSchool(student.school);
 
-    res.render("browse", { title: "Browse Devices", page: "browse", student: currentStudent(req), devices: results, query });
+    if (q) {
+        models = models.filter(m =>
+            m.name.toLowerCase().includes(q) ||
+            m.specs.toLowerCase().includes(q)
+        );
+    }
+
+    res.render("browse", {
+        title: "Browse Devices",
+        page: "browse",
+        student,
+        models,
+        query,
+        reasons: loanModel.LOAN_REASONS,
+        error: req.query.error || null,
+        success: req.query.success || null
+    });
 });
+
+// ---------- Admin: inventory management ----------
 
 // root admin page
 app.get('/admin', requireAdmin, async (req, res) => {
@@ -321,9 +329,115 @@ app.post('/admin/inventory/:id/edit', requireAdmin, async (req, res) => {
     }
 });
 
+// ---------- Admin: loan requests & active loans ----------
 
+// Review pending loan requests (approve/reject) and see all active loans.
+app.get('/admin/loans', requireAdmin, async (req, res) => {
+    const requests = await loanModel.getAllRequests();
+    const loans = await loanModel.getAllLoans();
+
+    res.render('admin/adminLoans', {
+        page: 'loans',
+        admin: req.session.user,
+        pendingRequests: requests.filter(r => r.status === 'pending'),
+        activeLoans: loans.filter(l => l.status === 'active'),
+        error: req.query.error || null,
+        success: req.query.success || null
+    });
+});
+
+// ---------- Loans & loan requests ----------
+
+// Student submits a loan request for a model.
+app.post("/loans/request", requireLogin, async (req, res) => {
+    const student = currentStudent(req);
+
+    if (student.role === "admin") {
+        return res.redirect("/browse?error=" + encodeURIComponent(
+            "Admins cannot submit loan requests."
+        ));
+    }
+
+    const { model_id, reason, remarks } = req.body;
+
+    const result = await loanModel.createLoanRequest(
+        req.session.user.id,
+        student.school,
+        model_id,
+        reason,
+        remarks
+    );
+
+    if (!result.ok) {
+        return res.redirect("/browse?error=" + encodeURIComponent(result.error));
+    }
+
+    return res.redirect("/loans?success=" + encodeURIComponent(
+        "Loan request submitted! You'll see it as Pending until an admin approves it."
+    ));
+});
+
+// My Loans (students only). Admins manage every loan/request on /admin/loans.
 app.get("/loans", requireLogin, async (req, res) => {
-    res.render("loans", { title: "My Loans", page: "loans", student: currentStudent(req) });
+    if (req.session.user.role === "admin") return res.redirect("/admin/loans");
+
+    const userId = req.session.user.id;
+    const student = currentStudent(req);
+
+    const requests = await loanModel.getRequestsByUser(userId);
+    const loans = await loanModel.getLoansByUser(userId);
+
+    res.render("loans", {
+        title: "My Loans",
+        page: "loans",
+        student,
+        requests,
+        loans,
+        error: req.query.error || null,
+        success: req.query.success || null
+    });
+});
+
+app.post("/loans/request/:id/cancel", requireLogin, async (req, res) => {
+    const result = await loanModel.cancelRequest(req.session.user.id, req.params.id);
+
+    const msg = result.ok
+        ? "success=" + encodeURIComponent("Request cancelled.")
+        : "error=" + encodeURIComponent(result.error);
+
+    res.redirect("/loans?" + msg);
+});
+
+app.post("/loans/:id/return", requireLogin, async (req, res) => {
+    const result = await loanModel.returnLoan(req.session.user.id, req.params.id);
+
+    const msg = result.ok
+        ? "success=" + encodeURIComponent("Laptop returned. Thank you!")
+        : "error=" + encodeURIComponent(result.error);
+
+    res.redirect("/loans?" + msg);
+});
+
+// Admin approves a pending loan request -> creates an active loan.
+app.post("/admin/loans/requests/:id/approve", requireAdmin, async (req, res) => {
+    const result = await loanModel.approveRequest(req.params.id, req.session.user.id);
+
+    const msg = result.ok
+        ? "success=" + encodeURIComponent("Request approved — loan created.")
+        : "error=" + encodeURIComponent(result.error);
+
+    res.redirect("/admin/loans?" + msg);
+});
+
+// Admin rejects a pending loan request.
+app.post("/admin/loans/requests/:id/reject", requireAdmin, async (req, res) => {
+    const result = await loanModel.rejectRequest(req.params.id, req.session.user.id);
+
+    const msg = result.ok
+        ? "success=" + encodeURIComponent("Request rejected.")
+        : "error=" + encodeURIComponent(result.error);
+
+    res.redirect("/admin/loans?" + msg);
 });
 
 app.get("/penalties", requireLogin, async (req, res) => {
@@ -334,17 +448,18 @@ app.get("/profile", requireLogin, async (req, res) => {
     res.render("profile", { title: "Profile", page: "profile", student: currentStudent(req), stats, loan });
 });
 
-// Handle profile edits from the Edit Profile modal — ported from CA2.
-// Edits are stored on the session so they persist for the logged-in user.
 app.post("/profile", requireLogin, (req, res) => {
-    const { name, school, email, phone } = req.body;
+    const { name, school, course, email, phone } = req.body;
+
     req.session.profile = {
         ...(req.session.profile || {}),
         ...(name ? { name: name.trim() } : {}),
         ...(school ? { school: school.trim() } : {}),
+        ...(course ? { course: course.trim() } : {}),
         ...(email ? { email: email.trim() } : {}),
         ...(phone ? { phone: phone.trim() } : {})
     };
+
     console.log(`Profile updated for ${req.session.user.id}:`, req.session.profile);
     res.redirect("/profile");
 });
@@ -361,12 +476,13 @@ app.get("/support", requireLogin, async (req, res) => {
 app.post("/support", requireLogin, async (req, res) => {
     const student = currentStudent(req);
     const { subject, message } = req.body;
+
     console.log(`Support request received from ${student.name} (${student.id}): ${subject} - ${message}`);
     res.redirect("/support?submitted=true");
 });
 
-// Start the server
 const PORT = 3001;
+
 app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
 });
