@@ -440,10 +440,6 @@ app.post("/admin/loans/requests/:id/reject", requireAdmin, async (req, res) => {
     res.redirect("/admin/loans?" + msg);
 });
 
-app.get("/penalties", requireLogin, async (req, res) => {
-    res.render("penalties", { title: "Penalties", page: "penalties", student: currentStudent(req) });
-});
-
 app.get("/profile", requireLogin, async (req, res) => {
     res.render("profile", { title: "Profile", page: "profile", student: currentStudent(req), stats, loan });
 });

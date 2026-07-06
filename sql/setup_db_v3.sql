@@ -200,18 +200,20 @@ INSERT INTO school (school_id, school_name) VALUES
 ('SSH', 'School of Sports and Health'),
 ('STA', 'School of Technology for Arts, Media and Design');
 
+-- password_hash values are bcrypt hashes (cost 10). The plaintext login
+-- password for each user is shown in the comment beside it.
 INSERT INTO user
 (user_id, school_id, name, email, password_hash, role)
 VALUES
-(1, 'SBZ', 'Alice Tan', 'alice@rp.edu.sg', 'hash1', 'student'),
-(2, 'SOI', 'Ben Lim', 'ben@rp.edu.sg', 'hash2', 'student'),
-(3, 'SEG', 'Cindy Ng', 'cindy@rp.edu.sg', 'hash3', 'student'),
-(4, NULL, 'David Wong', 'david@rp.edu.sg', 'hash4', 'admin'),
-(5, 'SOH', 'Ethan Koh', 'ethan@rp.edu.sg', 'hash5', 'student'),
-(6, 'SAS', 'Farah Ahmad', 'farah@rp.edu.sg', 'hash6', 'student'),
-(7, 'STA', 'Grace Lee', 'grace@rp.edu.sg', 'hash7', 'student'),
-(8, 'SSH', 'Hafiz Rahman', 'hafiz@rp.edu.sg', 'hash8', 'student'),
-(9, NULL, 'Irene Lim', 'irene@rp.edu.sg', 'hash9', 'admin');
+(1, 'SBZ', 'Alice Tan', 'alice@rp.edu.sg', '$2b$10$SOYEc//l.6FyKnpVb/HkTuPVJ.W3cOSZJsNikrgmLvq/9dgNhg.Pm', 'student'),   -- hash1
+(2, 'SOI', 'Ben Lim', 'ben@rp.edu.sg', '$2b$10$1Sl/A8QPtEezLRZnUmRZP.Mw5i9PaqdVKM82dUhDumH7fQxKwG8I6', 'student'),        -- hash2
+(3, 'SEG', 'Cindy Ng', 'cindy@rp.edu.sg', '$2b$10$UZbcGwX7I6NuDtWu.Np24Oi6PJFiGhOPn6jfdxai9n5pLclkXio0m', 'student'),     -- hash3
+(4, NULL, 'David Wong', 'david@rp.edu.sg', '$2b$10$O1bQQOj3YNgjFjaGrQPRquGeFxo4/pMjHG0fiVwV6UJRlXWi1P6wu', 'admin'),      -- hash4
+(5, 'SOH', 'Ethan Koh', 'ethan@rp.edu.sg', '$2b$10$9WBLIMnlnZlFemu0HqP54OIH0UJtlV1IOM/olyMuRTGYoAwzzujby', 'student'),    -- hash5
+(6, 'SAS', 'Farah Ahmad', 'farah@rp.edu.sg', '$2b$10$KTHVXwpc6yb.gyl.ZfTM3e1BtxZh9KSkOCwmX4hvKPpC.dJAi135K', 'student'),  -- hash6
+(7, 'STA', 'Grace Lee', 'grace@rp.edu.sg', '$2b$10$cT0phQxjLabjZKeZIVwm3.g8KCMndBnyALwt..V3zOg74XXuCCLrS', 'student'),    -- hash7
+(8, 'SSH', 'Hafiz Rahman', 'hafiz@rp.edu.sg', '$2b$10$JsrmeZv3CslmmQ2m2XWMJ.vG5V1IisLeM7Ywpv4bHpBwD2xixaCR6', 'student'),-- hash8
+(9, NULL, 'Irene Lim', 'irene@rp.edu.sg', '$2b$10$1yHBiPZ1Nwfa2WcQn.27pO1p1.ZqEBUNiDCcCdqtZDhherpmxaTzG', 'admin');       -- hash9
 
 INSERT INTO laptop_model
 (model_id, brand, model_name, cpu, ram, storage, graphics_type, image_url)
