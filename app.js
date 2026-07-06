@@ -1,6 +1,7 @@
 const express = require("express");
 const path = require("path");
 const session = require("express-session");
+const bcrypt = require("bcryptjs");
 
 const { getUserByEmail } = require("./models/userModel");
 const { getModelsWithStats, getModelStatsById, deleteModel, getModelById, updateModel, createModel } = require("./models/laptopModel");
@@ -116,9 +117,9 @@ app.post("/login/:role", async (req, res) => {
     try {
         const user = await getUserByEmail(email);
 
-        // Compare the typed password directly against the stored password_hash.
+        // Verify the typed password against the stored bcrypt hash.
         // Same generic message whether the email or password is wrong.
-        if (!user || password !== user.password_hash) {
+        if (!user || !(await bcrypt.compare(password, user.password_hash))) {
             return render("Invalid email or password.");
         }
 
