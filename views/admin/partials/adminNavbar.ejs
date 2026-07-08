@@ -1,0 +1,25 @@
+<nav class="navbar navbar-expand bg-white border-bottom sticky-top py-2 px-4">
+    <div class="d-flex align-items-center gap-3">
+        <img src="/images/rp-logo.png" alt="Republic Polytechnic Logo" style="height:42px;">
+        <div>
+            <h5 class="mb-0 fw-bold">RP Resource Centre</h5>
+            <small class="text-success fw-semibold">Admin Portal</small>
+        </div>
+    </div>
+
+    <div class="ms-auto d-flex align-items-center gap-3">
+        <button class="btn btn-light btn-sm rounded-circle border" style="width:38px;height:38px;">
+            <i class="fa-regular fa-bell"></i>
+        </button>
+        <div class="d-flex align-items-center gap-2">
+            <div class="rounded-circle bg-success bg-opacity-10 text-success d-flex align-items-center justify-content-center" style="width:38px;height:38px;">
+                <i class="fa-solid fa-user-shield"></i>
+            </div>
+            <div>
+                <div class="fw-semibold small"><%= admin.name %></div>
+                <div class="text-muted" style="font-size:11px;"><%= admin.id %></div>
+            </div>
+        </div>
+        <a href="/logout" class="btn btn-outline-primary btn-sm rounded-pill px-3">Logout</a>
+    </div>
+</nav>

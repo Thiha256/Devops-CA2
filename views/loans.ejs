@@ -52,7 +52,6 @@
                                 <th>Model</th>
                                 <th>Reason</th>
                                 <th>Remarks</th>
-                                <th>Start Date</th>
                                 <th>Requested On</th>
                                 <th>Status</th>
                                 <th></th>
@@ -64,7 +63,6 @@
                                     <td class="fw-semibold"><%= r.modelName %></td>
                                     <td><%= r.reasonLabel %></td>
                                     <td class="text-muted small"><%= r.remarks %></td>
-                                    <td><%= r.startLabel %></td>
                                     <td><%= r.dateLabel %></td>
                                     <td>
                                         <% if (r.status === "pending") { %>
@@ -80,13 +78,6 @@
                                             <form method="POST" action="/loans/request/<%= r.request_id %>/cancel" class="d-inline">
                                                 <button type="submit" class="btn btn-sm btn-outline-secondary rounded-3">Cancel</button>
                                             </form>
-                                            <% if (student.role === "admin") { %>
-                                                <form method="POST" action="/dev/requests/<%= r.request_id %>/approve" class="d-inline">
-                                                    <button type="submit" class="btn btn-sm btn-outline-success rounded-3">
-                                                        Approve
-                                                    </button>
-                                                </form>
-                                            <% } %>
                                         <% } %>
                                     </td>
                                 </tr>
@@ -133,11 +124,11 @@
             <% } %>
 
             <% if (pastLoans.length > 0) { %>
-                <h6 class="fw-bold text-muted mt-4 mb-2">Past Loans</h6>
+                <h6 class="fw-bold text-muted mt-4 mb-2">Loan History</h6>
                 <ul class="list-group list-group-flush">
                     <% pastLoans.forEach(function(l) { %>
                         <li class="list-group-item d-flex justify-content-between align-items-center px-0">
-                            <span><%= l.modelName %> <span class="text-muted small">(borrowed <%= l.borrowLabel %>)</span></span>
+                            <span><%= l.modelName %> <span class="text-muted small">(borrowed <%= l.borrowLabel %> · returned <%= l.returnLabel %>)</span></span>
                             <span class="badge bg-secondary rounded-pill">Returned</span>
                         </li>
                     <% }); %>

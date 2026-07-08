@@ -1,5 +1,7 @@
 const db = require("../database");
 
+// Fetch a single user by their email (used for login), including their school
+// name via a join. Admins have no school_id, so school_name is null for them.
 async function getUserByEmail(email) {
     const [rows] = await db.execute(`
         SELECT

@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Laptop Rental</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="bg-light">
+
+<%- include("partials/adminNavbar") %>
+
+<div class="d-flex gap-4 p-4 align-items-start">
+    <%- include("partials/adminSidebar") %>
+
+    <main class="container py-4">
+    
+    <!-- Delete Error -->
+    <% if (typeof error !== 'undefined' && error) { %>
+        <div class="alert alert-danger d-flex align-items-center gap-2" role="alert">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            <span><%= error %></span>
+        </div>
+    <% } %>
+
+    <!-- HEADER & GLOBAL CONTROLS -->
+    <header class="bg-white border rounded-4 p-4 mb-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+        <div>
+            <span class="text-success fw-bold text-uppercase small">Inventory Management</span>
+            <h2 class="fw-bold my-1">Control all assets, models, and serial numbers.</h2>
+
+            <!-- Search Results Indicator -->
+            <% if (query) { %>
+                <p class="text-muted mb-0">
+                    Showing <strong><%= models.length %></strong> result<%= models.length === 1 ? "" : "s" %> for "<strong><%= query %></strong>".
+                    <a href="/admin" class="text-success text-decoration-none ms-2">Clear Filter</a>
+                </p>
+            <% } %>
+        </div>
+
+        <!-- Right Side Controls -->
+        <div class="d-flex gap-2">
+            <form action="/admin" method="GET" class="d-flex">
+                <div class="input-group">
+                    <span class="input-group-text bg-white border-end-0"><i class="fa-solid fa-magnifying-glass text-muted"></i></span>
+                    <input type="text" name="query" class="form-control border-start-0 ps-0" placeholder="Find Model Group..." value="<%= query || '' %>">
+                </div>
+            </form>
+
+            <a href="/admin/inventory/new" class="btn btn-success text-nowrap fw-bold">
+                <i class="fa-solid fa-plus me-1"></i> Add Model
+            </a>
+        </div>
+    </header>
+
+    <!-- EMPTY STATE -->
+    <% if (models.length === 0) { %>
+        <section class="bg-white border rounded-4 p-5 text-center shadow-sm">
+            <i class="fa-solid fa-laptop-medical fa-3x text-muted mb-3"></i>
+            <h5 class="fw-bold mb-1">No models found</h5>
+            <p class="text-muted mb-4">We couldn't find any hardware models matching "<strong><%= query %></strong>".</p>
+            <a href="/admin" class="btn btn-outline-success rounded-3 px-4">Clear Search</a>
+        </section>
+    <% } else { %>
+        
+        <!-- MODEL CARDS GRID -->
+        <section class="row g-4">
+            <% models.forEach(function(model) { %>
+                <div class="col-12 col-md-6 col-lg-4">
+                    <div class="bg-white border rounded-4 p-4 h-100 text-center shadow-sm d-flex flex-column position-relative">
+
+                        <!-- Card Options Menu -->
+                        <div class="dropdown position-absolute top-0 end-0 m-3">
+                            <button class="btn btn-sm btn-light border rounded-circle" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="width:32px;height:32px;">
+                                <i class="fa-solid fa-ellipsis-vertical"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                                <li><a class="dropdown-item" href="/admin/inventory/<%= model.id %>/edit"><i class="fa-solid fa-pen me-2 text-secondary"></i>Edit Model</a></li>
+                                <li>
+                                    <form action="/admin/inventory/<%= model.id %>/delete" method="POST"
+                                          onsubmit="return confirm('Delete <%= model.name %>? This cannot be undone.');">
+                                        <button type="submit" class="dropdown-item text-danger border-0 bg-transparent w-100 text-start">
+                                            <i class="fa-solid fa-trash me-2"></i>Delete Model
+                                        </button>
+                                    </form>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <!-- Image & Core Info -->
+                        <% if (model.image_url) { %>
+                            <img src="<%= model.image_url %>" alt="<%= model.name %>" class="mx-auto mb-3" style="height:100px; object-fit:contain;">
+                        <% } else { %>
+                            <i class="fa-solid fa-laptop fa-4x text-success mb-3"></i>
+                        <% } %>
+                        <h5 class="fw-bold mb-1"><%= model.name %></h5>
+                        <p class="text-muted small mb-3"><%= model.specs %></p>
+                        
+                        <!-- Admin Aggregated Counter Badges -->
+                        <div class="d-flex flex-wrap justify-content-center gap-2 mb-4">
+                            <span class="badge bg-light text-dark border rounded-pill">Total: <%= model.totalAssets %></span>
+                            <span class="badge bg-success rounded-pill">Available: <%= model.availableAssets %></span>
+                            <span class="badge bg-primary rounded-pill">Loaned: <%= model.loanedAssets %></span>
+                            <span class="badge bg-danger rounded-pill">Maint: <%= model.maintenanceAssets %></span>
+                        </div>
+                        
+                        <!-- Spacer to push buttons to the bottom if cards are different heights -->
+                        <div class="mt-auto"></div>
+
+                        <!-- Link to Page 2 (Individual Asset Manager) -->
+                        <a href="/admin/inventory/<%= model.id %>" class="btn btn-success rounded-3 w-100 fw-bold">
+                            Manage Assets <i class="fa-solid fa-arrow-right ms-2"></i>
+                        </a>
+                        
+                    </div>
+                </div>
+            <% }); %>
+        </section>
+    <% } %>
+
+</main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
