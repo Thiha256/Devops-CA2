@@ -60,7 +60,7 @@ async function getModelById(modelId) {
     return rows[0] || null;
 }
 
-async function updateModel(modelId, { brand, model_name, cpu, ram, storage, graphics_type, image_url }) {
+async function updateModel(modelId, brand, model_name, cpu, ram, storage, graphics_type, image_url) {
     await db.execute(`
         UPDATE laptop_model
         SET brand = ?, model_name = ?, cpu = ?, ram = ?, storage = ?, graphics_type = ?, image_url = ?
@@ -69,7 +69,7 @@ async function updateModel(modelId, { brand, model_name, cpu, ram, storage, grap
     );
 }
 
-async function createModel({ brand, model_name, cpu, ram, storage, graphics_type, image_url }) {
+async function createModel(brand, model_name, cpu, ram, storage, graphics_type, image_url) {
     const [result] = await db.execute(`
         INSERT INTO laptop_model (brand, model_name, cpu, ram, storage, graphics_type, image_url)
         VALUES (?, ?, ?, ?, ?, ?, ?)`,

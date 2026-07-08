@@ -5,7 +5,7 @@ const bcrypt = require("bcryptjs");
 
 const { getUserByEmail } = require("./models/userModel");
 const { getModelsWithStats, getModelStatsById, deleteModel, getModelById, updateModel, createModel } = require("./models/laptopModel");
-const { getAssetsByModel } = require("./models/assetModel");
+const { getAssetsByModel, createAsset, deleteAsset } = require("./models/assetModel");
 const loanModel = require("./models/loanModel");
 
 const app = express();
@@ -202,7 +202,7 @@ app.get('/admin', requireAdmin, async (req, res) => {
 });
 
 // Delete a model. Blocked by the DB's foreign keys if any laptops, school
-// assignments, or loan requests still reference it — surface that as an error.
+// assignments, or loan requests still reference it
 app.post('/admin/inventory/:id/delete', requireAdmin, async (req, res) => {
     try {
         await deleteModel(req.params.id);
@@ -227,7 +227,7 @@ app.post('/admin/inventory/:id/delete', requireAdmin, async (req, res) => {
     }
 });
 
-// Add model form. Shares modelForm.ejs with the edit form — an id-less
+// Add model form. Shares modelForm.ejs with the edit form an id-less
 // model object tells the template to render as "Add" and POST to /new.
 app.get('/admin/inventory/new', requireAdmin, (req, res) => {
     res.render('admin/modelForm', {
@@ -241,7 +241,7 @@ app.get('/admin/inventory/new', requireAdmin, (req, res) => {
 app.post('/admin/inventory/new', requireAdmin, async (req, res) => {
     const { brand, model_name, cpu, ram, storage, graphics_type, image_url } = req.body;
     try {
-        await createModel({ brand, model_name, cpu, ram, storage, graphics_type, image_url });
+        await createModel(brand, model_name, cpu, ram, storage, graphics_type, image_url);
         res.redirect('/admin');
     } catch (err) {
         console.error('Create model error:', err.message);
@@ -291,9 +291,69 @@ app.get('/admin/inventory/:id', requireAdmin, async (req, res) => {
     });
 });
 
+app.post('/admin/inventory/:id/assets/:laptopId/delete', requireAdmin, async (req, res) => {
+    try {
+        await deleteAsset(req.params.laptopId);
+    } catch (err) {
+        console.error('Delete asset error:', err.message);
+    }
+    res.redirect('/admin/inventory/' + req.params.id);
+});
+
+// Add asset form, scoped to one model.
+app.get('/admin/inventory/:id/assets/new', requireAdmin, async (req, res) => {
+    const model = await getModelStatsById(req.params.id);
+    if (!model) {
+        const allModels = await getModelsWithStats();
+        return res.render('admin/adminPage', {
+            page: 'inventory',
+            admin: req.session.user,
+            models: allModels,
+            query: '',
+            error: 'That model could not be found.'
+        });
+    }
+
+    res.render('admin/assetForm', {
+        page: 'inventory',
+        admin: req.session.user,
+        model,
+        asset_number: '',
+        serial_no: '',
+        error: null
+    });
+});
+
+app.post('/admin/inventory/:id/assets/new', requireAdmin, async (req, res) => {
+    const { asset_number, serial_no } = req.body;
+    const asset_id = 'LAP' + asset_number.padStart(3, '0');
+    try {
+        await createAsset(req.params.id, asset_id, serial_no);
+        res.redirect('/admin/inventory/' + req.params.id);
+    } catch (err) {
+        const isDuplicate = err.code === 'ER_DUP_ENTRY';
+        if (!isDuplicate) {
+            console.error('Create asset error:', err.message);
+        }
+
+        const model = await getModelStatsById(req.params.id);
+        res.render('admin/assetForm', {
+            page: 'inventory',
+            admin: req.session.user,
+            model,
+            asset_number,
+            serial_no,
+            error: isDuplicate
+                ? 'That Asset ID or Serial Number is already in use.'
+                : 'Something went wrong adding this asset.'
+        });
+    }
+});
+
 // Edit model form, pre-filled with that one model's current details.
 app.get('/admin/inventory/:id/edit', requireAdmin, async (req, res) => {
     const model = await getModelById(req.params.id);
+    // if no model is found, render the adminPage instead
     if (!model) {
         const allModels = await getModelsWithStats();
         return res.render('admin/adminPage', {
@@ -315,7 +375,7 @@ app.get('/admin/inventory/:id/edit', requireAdmin, async (req, res) => {
 app.post('/admin/inventory/:id/edit', requireAdmin, async (req, res) => {
     const { brand, model_name, cpu, ram, storage, graphics_type, image_url } = req.body;
     try {
-        await updateModel(req.params.id, { brand, model_name, cpu, ram, storage, graphics_type, image_url });
+        await updateModel(req.params.id, brand, model_name, cpu, ram, storage, graphics_type, image_url);
         res.redirect('/admin');
     } catch (err) {
         console.error('Update model error:', err.message);
@@ -423,7 +483,7 @@ app.post("/admin/loans/requests/:id/approve", requireAdmin, async (req, res) => 
     const result = await loanModel.approveRequest(req.params.id, req.session.user.id);
 
     const msg = result.ok
-        ? "success=" + encodeURIComponent("Request approved — loan created.")
+        ? "success=" + encodeURIComponent("Request approved, loan created.")
         : "error=" + encodeURIComponent(result.error);
 
     res.redirect("/admin/loans?" + msg);
