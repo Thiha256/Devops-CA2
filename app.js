@@ -597,7 +597,9 @@ app.get('/admin/loans', requireAdmin, async (req, res) => {
 
 // --- STEP 5: admin approves a pending request -> creates the active loan ---
 app.post("/admin/loans/requests/:id/approve", requireAdmin, async (req, res) => {
-    const result = await loanModel.approveRequest(req.params.id, req.session.user.id, req.body.remarks);
+    const result = await loanModel.approveRequest(
+        req.params.id, req.session.user.id, req.body.remarks, req.body.start_date, req.body.due_date
+    );
 
     // Notify the student (not the admin) that their request was approved.
     if (result.ok && result.student) {

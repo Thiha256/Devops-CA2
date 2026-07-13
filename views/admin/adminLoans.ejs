@@ -198,6 +198,20 @@
                     <strong id="reviewModel"></strong> for <strong id="reviewStudent"></strong>.
                 </p>
 
+                <!-- Loan dates: only shown when approving -->
+                <div id="reviewDatesWrap" style="display:none;">
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label fw-semibold small">Start date</label>
+                            <input type="date" name="start_date" id="reviewStartDate" class="form-control">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold small">Due date</label>
+                            <input type="date" name="due_date" id="reviewDueDate" class="form-control">
+                        </div>
+                    </div>
+                </div>
+
                 <div class="mb-1">
                     <label class="form-label fw-semibold small">Remarks (optional)</label>
                     <textarea name="remarks" id="reviewRemarks" class="form-control" rows="3"
@@ -256,6 +270,12 @@
         const studentEl = document.getElementById("reviewStudent");
         const remarks = document.getElementById("reviewRemarks");
         const submit = document.getElementById("reviewSubmit");
+        const datesWrap = document.getElementById("reviewDatesWrap");
+        const startDate = document.getElementById("reviewStartDate");
+        const dueDate = document.getElementById("reviewDueDate");
+
+        // Format a Date as YYYY-MM-DD for a <input type="date">.
+        function ymd(d) { return d.toISOString().slice(0, 10); }
 
         document.querySelectorAll(".review-btn").forEach(function (btn) {
             btn.addEventListener("click", function () {
@@ -268,6 +288,29 @@
                 studentEl.textContent = btn.dataset.student;
                 remarks.value = "";
 
+                // Loan dates only apply to approval. Default: start = today,
+                // due = one month later. Both required when approving.
+                if (isApprove) {
+                    const today = new Date();
+                    const inOneMonth = new Date(today);
+                    inOneMonth.setMonth(inOneMonth.getMonth() + 1);
+
+                    startDate.value = ymd(today);
+                    startDate.min = ymd(today);
+                    dueDate.value = ymd(inOneMonth);
+                    dueDate.min = ymd(today);
+
+                    datesWrap.style.display = "block";
+                    startDate.required = true;
+                    dueDate.required = true;
+                } else {
+                    datesWrap.style.display = "none";
+                    startDate.required = false;
+                    dueDate.required = false;
+                    startDate.value = "";
+                    dueDate.value = "";
+                }
+
                 submit.className = "btn rounded-3 " + (isApprove ? "btn-success" : "btn-danger");
                 submit.innerHTML = isApprove
                     ? '<i class="fa-solid fa-check me-1"></i>Approve'
@@ -275,6 +318,12 @@
 
                 modal.show();
             });
+        });
+
+        // Keep the due date on/after the start date as the admin changes it.
+        startDate.addEventListener("change", function () {
+            dueDate.min = startDate.value;
+            if (dueDate.value && dueDate.value < startDate.value) dueDate.value = startDate.value;
         });
     })();
 </script>

@@ -291,7 +291,18 @@ async function getAllLoans() {
     });
 }
 
-async function approveRequest(requestId, adminId, remarks = null) {
+async function approveRequest(requestId, adminId, remarks = null, startDate = null, dueDate = null) {
+    // The admin sets the loan's start (borrow) and due dates on approval.
+    // Defaults: start = today, due = one month after the start date.
+    // The due date must not be earlier than the start date.
+    if (startDate && dueDate) {
+        const start = new Date(startDate);
+        const due = new Date(dueDate);
+        if (isNaN(start.getTime()) || isNaN(due.getTime()) || due < start) {
+            return { ok: false, error: "Please choose valid dates — the due date cannot be before the start date." };
+        }
+    }
+
     const connection = await db.getConnection();
 
     try {
@@ -346,8 +357,11 @@ async function approveRequest(requestId, adminId, remarks = null) {
             INSERT INTO loan
                 (laptop_id, user_id, borrow_date, due_date, return_date)
             VALUES
-                (?, ?, CURDATE(), DATE_ADD(CURDATE(), INTERVAL 1 MONTH), NULL)
-        `, [laptopId, request.user_id]);
+                (?, ?,
+                 COALESCE(?, CURDATE()),
+                 COALESCE(?, DATE_ADD(COALESCE(?, CURDATE()), INTERVAL 1 MONTH)),
+                 NULL)
+        `, [laptopId, request.user_id, startDate || null, dueDate || null, startDate || null]);
 
         await connection.commit();
 
