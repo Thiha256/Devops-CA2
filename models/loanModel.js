@@ -504,13 +504,17 @@ async function getReminderCandidates(dueSoonDays = 2) {
         ORDER BY lo.due_date ASC
     `, [dueSoonDays]);
 
+    const rate = Number(process.env.FINE_RATE_PER_DAY) || 1;
+
     return rows.map(r => {
         const days = Number(r.daysToDue);
         let type, message;
 
         if (days < 0) {
+            const daysOverdue = Math.abs(days);
+            const accruedFine = daysOverdue * rate;
             type = "loan_overdue";
-            message = `Your loan of ${r.modelName} is ${Math.abs(days)} day(s) overdue. Please return it to avoid further penalties.`;
+            message = `Your loan of ${r.modelName} is ${daysOverdue} day(s) overdue. A late fine of $${accruedFine} has accrued so far (at $${rate}/day) - please return it as soon as possible to stop it increasing.`;
         } else if (days === 0) {
             type = "loan_due_soon";
             message = `Your loan of ${r.modelName} is due today. Please return it on time.`;

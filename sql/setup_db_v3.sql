@@ -186,6 +186,27 @@ CREATE TABLE IF NOT EXISTS `resource_centre_db`.`loan_request` (
 ENGINE = InnoDB;
 
 
+-- -----------------------------------------------------
+-- Table `resource_centre_db`.`notification`
+-- Backs the navbar bell + Notifications page (event-driven notifications).
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `resource_centre_db`.`notification` (
+  `notification_id` INT NOT NULL AUTO_INCREMENT,
+  `user_id` INT NOT NULL,
+  `type` VARCHAR(50) NOT NULL,
+  `message` VARCHAR(500) NOT NULL,
+  `is_read` TINYINT NOT NULL DEFAULT 0,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`notification_id`),
+  INDEX `fk_notification_user_idx` (`user_id` ASC) VISIBLE,
+  CONSTRAINT `fk_notification_user`
+    FOREIGN KEY (`user_id`)
+    REFERENCES `resource_centre_db`.`user` (`user_id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION)
+ENGINE = InnoDB;
+
+
 SET SQL_MODE=@OLD_SQL_MODE;
 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS;
 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS;
@@ -205,14 +226,14 @@ INSERT INTO school (school_id, school_name) VALUES
 INSERT INTO user
 (user_id, school_id, name, email, password_hash, role)
 VALUES
-(1, 'SBZ', 'Alice Tan', 'alice@rp.edu.sg', '$2b$10$SOYEc//l.6FyKnpVb/HkTuPVJ.W3cOSZJsNikrgmLvq/9dgNhg.Pm', 'student'),   -- hash1
-(2, 'SOI', 'Ben Lim', 'ben@rp.edu.sg', '$2b$10$1Sl/A8QPtEezLRZnUmRZP.Mw5i9PaqdVKM82dUhDumH7fQxKwG8I6', 'student'),        -- hash2
+(1, 'SBZ', 'May Poe Khitt', '25038034@myrp.edu.sg', '$2b$10$SOYEc//l.6FyKnpVb/HkTuPVJ.W3cOSZJsNikrgmLvq/9dgNhg.Pm', 'student'),   -- hash1
+(2, 'SOI', 'Lin Htut Win', '25038212@myrp.edu.sg', '$2b$10$1Sl/A8QPtEezLRZnUmRZP.Mw5i9PaqdVKM82dUhDumH7fQxKwG8I6', 'student'),        -- hash2
 (3, 'SEG', 'Cindy Ng', 'cindy@rp.edu.sg', '$2b$10$UZbcGwX7I6NuDtWu.Np24Oi6PJFiGhOPn6jfdxai9n5pLclkXio0m', 'student'),     -- hash3
-(4, NULL, 'David Wong', 'david@rp.edu.sg', '$2b$10$O1bQQOj3YNgjFjaGrQPRquGeFxo4/pMjHG0fiVwV6UJRlXWi1P6wu', 'admin'),      -- hash4
-(5, 'SOH', 'Ethan Koh', 'ethan@rp.edu.sg', '$2b$10$9WBLIMnlnZlFemu0HqP54OIH0UJtlV1IOM/olyMuRTGYoAwzzujby', 'student'),    -- hash5
-(6, 'SAS', 'Farah Ahmad', 'farah@rp.edu.sg', '$2b$10$KTHVXwpc6yb.gyl.ZfTM3e1BtxZh9KSkOCwmX4hvKPpC.dJAi135K', 'student'),  -- hash6
-(7, 'STA', 'Grace Lee', 'grace@rp.edu.sg', '$2b$10$cT0phQxjLabjZKeZIVwm3.g8KCMndBnyALwt..V3zOg74XXuCCLrS', 'student'),    -- hash7
-(8, 'SSH', 'Hafiz Rahman', 'hafiz@rp.edu.sg', '$2b$10$JsrmeZv3CslmmQ2m2XWMJ.vG5V1IisLeM7Ywpv4bHpBwD2xixaCR6', 'student'),-- hash8
+(4, NULL, 'Bernard Leong', 'bernard_leong@rp.edu.sg', '$2b$10$O1bQQOj3YNgjFjaGrQPRquGeFxo4/pMjHG0fiVwV6UJRlXWi1P6wu', 'admin'),      -- hash4
+(5, 'SOH', 'Thiha Aung', '25036723@myrp.edu.sg', '$2b$10$9WBLIMnlnZlFemu0HqP54OIH0UJtlV1IOM/olyMuRTGYoAwzzujby', 'student'),    -- hash5
+(6, 'SAS', 'Sim Lewin', '25049276@myrp.edu.sg', '$2b$10$KTHVXwpc6yb.gyl.ZfTM3e1BtxZh9KSkOCwmX4hvKPpC.dJAi135K', 'student'),  -- hash6
+(7, 'STA', 'Steffi Tee Yi Hue', '25034408@myrp.edu.sg', '$2b$10$cT0phQxjLabjZKeZIVwm3.g8KCMndBnyALwt..V3zOg74XXuCCLrS', 'student'),    -- hash7
+(8, 'SSH', 'Paul Chin', '25031330@myrp.edu.sg', '$2b$10$JsrmeZv3CslmmQ2m2XWMJ.vG5V1IisLeM7Ywpv4bHpBwD2xixaCR6', 'student'),-- hash8
 (9, NULL, 'Irene Lim', 'irene@rp.edu.sg', '$2b$10$1yHBiPZ1Nwfa2WcQn.27pO1p1.ZqEBUNiDCcCdqtZDhherpmxaTzG', 'admin');       -- hash9
 
 INSERT INTO laptop_model
