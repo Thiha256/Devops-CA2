@@ -16,8 +16,8 @@
 
     <main class="container py-4">
     
-    <!-- delete error, only render this part if error is not NULL -->
-    <% if (error) { %>
+    <!-- Delete Error -->
+    <% if (typeof error !== 'undefined' && error) { %>
         <div class="alert alert-danger d-flex align-items-center gap-2" role="alert">
             <i class="fa-solid fa-triangle-exclamation"></i>
             <span><%= error %></span>

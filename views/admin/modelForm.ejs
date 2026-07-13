@@ -15,7 +15,7 @@
     <%- include("partials/adminSidebar") %>
 
     <!-- No id means this is a blank model passed in for the Add form; same template serves both. -->
-    <% const isNew = model.id === undefined; %>
+    <% const isNew = !model.id; %>
 
     <main class="container py-4">
 

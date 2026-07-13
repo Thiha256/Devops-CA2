@@ -7,6 +7,7 @@ const { getUserByEmail } = require("./models/userModel");
 const { getModelsWithStats, getModelStatsById, deleteModel, getModelById, updateModel, createModel } = require("./models/laptopModel");
 const { getAssetsByModel, createAsset, deleteAsset } = require("./models/assetModel");
 const loanModel = require("./models/loanModel");
+const reportModel = require("./models/reportModel");
 
 const app = express();
 
@@ -202,7 +203,7 @@ app.get('/admin', requireAdmin, async (req, res) => {
 });
 
 // Delete a model. Blocked by the DB's foreign keys if any laptops, school
-// assignments, or loan requests still reference it
+// assignments, or loan requests still reference it — surface that as an error.
 app.post('/admin/inventory/:id/delete', requireAdmin, async (req, res) => {
     try {
         await deleteModel(req.params.id);
@@ -227,7 +228,7 @@ app.post('/admin/inventory/:id/delete', requireAdmin, async (req, res) => {
     }
 });
 
-// Add model form. Shares modelForm.ejs with the edit form an id-less
+// Add model form. Shares modelForm.ejs with the edit form — an id-less
 // model object tells the template to render as "Add" and POST to /new.
 app.get('/admin/inventory/new', requireAdmin, (req, res) => {
     res.render('admin/modelForm', {
@@ -406,6 +407,18 @@ app.get('/admin/loans', requireAdmin, async (req, res) => {
     });
 });
 
+app.get('/admin/reports', requireAdmin, async (req, res) => {
+    res.render('admin/adminReport', {
+        page: 'reports',
+        admin: req.session.user,
+        stats: await reportModel.getSummaryStats(),
+        topModels: await reportModel.getMostRequestedModels(),
+        recentReviews: await reportModel.getRecentReviews(),
+        overdueLoans: await reportModel.getOverdueLoans(),
+        loansBySchool: await reportModel.getLoansBySchool()
+    });
+});
+
 // ---------- Loans & loan requests ----------
 
 // Student submits a loan request for a model.
@@ -537,6 +550,12 @@ app.post("/support", requireLogin, async (req, res) => {
     res.redirect("/support?submitted=true");
 });
 
+app.get("/admin/profile", requireAdmin, async (req, res) => {
+    res.render("admin/adminProfile", {
+        page: "profile",
+        admin: req.session.user
+    });
+});
 const PORT = 3001;
 
 app.listen(PORT, () => {

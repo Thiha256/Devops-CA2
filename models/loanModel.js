@@ -22,6 +22,7 @@ async function getAllModels() {
             CONCAT(lm.brand, ' ', lm.model_name) AS name,
             CONCAT(lm.cpu, ', ', lm.ram, 'GB RAM, ', lm.storage, 'GB SSD') AS specs,
             'fa-laptop' AS icon,
+            lm.image_url,
             COALESCE((
                 SELECT COUNT(*)
                 FROM laptop l
@@ -38,7 +39,7 @@ async function getAllModels() {
         FROM laptop_model lm
         LEFT JOIN school_has_laptop_model shlm ON shlm.model_id = lm.model_id
         LEFT JOIN school s ON s.school_id = shlm.school_id
-        GROUP BY lm.model_id, lm.brand, lm.model_name, lm.cpu, lm.ram, lm.storage
+        GROUP BY lm.model_id, lm.brand, lm.model_name, lm.cpu, lm.ram, lm.storage, lm.image_url
         ORDER BY lm.brand, lm.model_name
     `);
 
@@ -55,6 +56,7 @@ async function getModelsForSchool(schoolName) {
             CONCAT(lm.brand, ' ', lm.model_name) AS name,
             CONCAT(lm.cpu, ', ', lm.ram, 'GB RAM, ', lm.storage, 'GB SSD') AS specs,
             'fa-laptop' AS icon,
+            lm.image_url,
             COALESCE((
                 SELECT COUNT(*)
                 FROM laptop l
@@ -74,7 +76,7 @@ async function getModelsForSchool(schoolName) {
         LEFT JOIN school_has_laptop_model shlm ON shlm.model_id = lm.model_id
         LEFT JOIN school s2 ON s2.school_id = shlm.school_id
         WHERE sAllowed.school_name = ?
-        GROUP BY lm.model_id, lm.brand, lm.model_name, lm.cpu, lm.ram, lm.storage
+        GROUP BY lm.model_id, lm.brand, lm.model_name, lm.cpu, lm.ram, lm.storage, lm.image_url
         ORDER BY lm.brand, lm.model_name
     `, [schoolName]);
 
@@ -241,6 +243,7 @@ async function getLoansByUser(userId) {
             status: l.return_date ? "returned" : "active",
             borrowLabel: formatDate(l.borrow_date),
             dueLabel: formatDate(l.due_date),
+            returnLabel: l.return_date ? formatDate(l.return_date) : null,
             daysRemaining,
             overdue: !l.return_date && daysRemaining < 0
         };
@@ -274,6 +277,7 @@ async function getAllLoans() {
             status: l.return_date ? "returned" : "active",
             borrowLabel: formatDate(l.borrow_date),
             dueLabel: formatDate(l.due_date),
+            returnLabel: l.return_date ? formatDate(l.return_date) : null,
             daysRemaining,
             overdue: !l.return_date && daysRemaining < 0
         };

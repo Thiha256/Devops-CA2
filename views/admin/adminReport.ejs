@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Reports · Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="bg-light">
+
+<%- include("partials/adminNavbar") %>
+
+<div class="d-flex gap-4 p-4 align-items-start">
+    <%- include("partials/adminSidebar") %>
+
+    <main class="container py-4">
+
+        <header class="bg-white border rounded-4 p-4 mb-4">
+            <span class="text-success fw-bold text-uppercase small">Reports</span>
+            <h2 class="fw-bold my-1">Resource Centre Overview</h2>
+            <p class="text-muted mb-0">Live statistics on stock, demand, decisions and overdue loans, generated from the database.</p>
+        </header>
+
+        <section class="row g-3 mb-4">
+            <div class="col-6 col-md-4 col-xl-2">
+                <div class="bg-white border rounded-4 p-3 text-center h-100">
+                    <div class="fs-3 fw-bold"><%= stats.totalLaptops %></div>
+                    <div class="text-muted small">Total Laptops</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-4 col-xl-2">
+                <div class="bg-white border rounded-4 p-3 text-center h-100">
+                    <div class="fs-3 fw-bold text-success"><%= stats.availableLaptops %></div>
+                    <div class="text-muted small">Available</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-4 col-xl-2">
+                <div class="bg-white border rounded-4 p-3 text-center h-100">
+                    <div class="fs-3 fw-bold text-primary"><%= stats.onLoanLaptops %></div>
+                    <div class="text-muted small">On Loan</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-4 col-xl-2">
+                <div class="bg-white border rounded-4 p-3 text-center h-100">
+                    <div class="fs-3 fw-bold text-secondary"><%= stats.maintenanceLaptops %></div>
+                    <div class="text-muted small">Maintenance</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-4 col-xl-2">
+                <div class="bg-white border rounded-4 p-3 text-center h-100">
+                    <div class="fs-3 fw-bold text-warning"><%= stats.pendingRequests %></div>
+                    <div class="text-muted small">Pending Requests</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-4 col-xl-2">
+                <div class="bg-white border rounded-4 p-3 text-center h-100">
+                    <div class="fs-3 fw-bold <%= stats.overdueLoans > 0 ? 'text-danger' : '' %>"><%= stats.overdueLoans %></div>
+                    <div class="text-muted small">Overdue Loans</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="bg-white border rounded-4 p-4 mb-4">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <h5 class="fw-bold mb-0"><i class="fa-solid fa-fire me-2 text-primary"></i>Most Requested Models</h5>
+                <span class="text-muted small">Demand vs stock — helps decide what to buy more of</span>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead>
+                        <tr class="text-muted small text-uppercase">
+                            <th>Model</th>
+                            <th>Total Requests</th>
+                            <th>Pending</th>
+                            <th>Approved</th>
+                            <th>Stock</th>
+                            <th>Demand</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% topModels.forEach(function(m) { %>
+                            <tr>
+                                <td class="fw-semibold"><%= m.name %></td>
+                                <td><%= m.totalRequests %></td>
+                                <td><%= m.pendingRequests %></td>
+                                <td><%= m.approvedRequests %></td>
+                                <td><%= m.availableUnits %> of <%= m.totalUnits %> available</td>
+                                <td>
+                                    <% if (m.highDemand) { %>
+                                        <span class="badge bg-danger rounded-pill">High — more requests than stock</span>
+                                    <% } else if (m.totalRequests > 0) { %>
+                                        <span class="badge bg-success rounded-pill">Healthy</span>
+                                    <% } else { %>
+                                        <span class="badge bg-secondary rounded-pill">No demand yet</span>
+                                    <% } %>
+                                </td>
+                            </tr>
+                        <% }); %>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="bg-white border rounded-4 p-4 mb-4">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <h5 class="fw-bold mb-0"><i class="fa-solid fa-clock-rotate-left me-2 text-primary"></i>Recent Decisions</h5>
+                <span class="text-muted small">Last 10 approvals and rejections</span>
+            </div>
+
+            <% if (recentReviews.length === 0) { %>
+                <p class="text-muted mb-0">No requests have been reviewed yet.</p>
+            <% } else { %>
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0">
+                        <thead>
+                            <tr class="text-muted small text-uppercase">
+                                <th>Student</th>
+                                <th>Model</th>
+                                <th>Reason</th>
+                                <th>Decision</th>
+                                <th>Reviewed By</th>
+                                <th>When</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% recentReviews.forEach(function(r) { %>
+                                <tr>
+                                    <td class="fw-semibold"><%= r.studentName %></td>
+                                    <td><%= r.modelName %></td>
+                                    <td class="text-muted small"><%= r.reasonLabel %></td>
+                                    <td>
+                                        <% if (r.status === "approved") { %>
+                                            <span class="badge bg-success rounded-pill">Approved</span>
+                                        <% } else { %>
+                                            <span class="badge bg-danger rounded-pill">Rejected</span>
+                                        <% } %>
+                                    </td>
+                                    <td><%= r.reviewerName %></td>
+                                    <td class="text-muted small"><%= r.reviewedLabel %></td>
+                                </tr>
+                            <% }); %>
+                        </tbody>
+                    </table>
+                </div>
+            <% } %>
+        </section>
+
+        <section class="bg-white border rounded-4 p-4 mb-4">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <h5 class="fw-bold mb-0"><i class="fa-solid fa-triangle-exclamation me-2 text-danger"></i>Overdue Loans</h5>
+                <span class="badge <%= overdueLoans.length > 0 ? 'bg-danger' : 'bg-success' %> rounded-pill"><%= overdueLoans.length %> overdue</span>
+            </div>
+
+            <% if (overdueLoans.length === 0) { %>
+                <p class="text-muted mb-0">No overdue loans. 🎉</p>
+            <% } else { %>
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0">
+                        <thead>
+                            <tr class="text-muted small text-uppercase">
+                                <th>Loan ID</th>
+                                <th>Student</th>
+                                <th>Model</th>
+                                <th>Asset</th>
+                                <th>Due Date</th>
+                                <th>Days Overdue</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% overdueLoans.forEach(function(l) { %>
+                                <tr>
+                                    <td class="text-muted small">RP-LOAN-<%= String(l.loan_id).padStart(3, "0") %></td>
+                                    <td class="fw-semibold"><%= l.studentName %></td>
+                                    <td><%= l.modelName %></td>
+                                    <td class="text-muted small"><%= l.asset_id %></td>
+                                    <td><%= l.dueLabel %></td>
+                                    <td><span class="badge bg-danger rounded-pill"><%= l.daysOverdue %> day<%= l.daysOverdue === 1 ? "" : "s" %></span></td>
+                                </tr>
+                            <% }); %>
+                        </tbody>
+                    </table>
+                </div>
+            <% } %>
+        </section>
+
+        <section class="bg-white border rounded-4 p-4">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <h5 class="fw-bold mb-0"><i class="fa-solid fa-school me-2 text-primary"></i>Loans by School</h5>
+                <span class="text-muted small">Which schools borrow the most</span>
+            </div>
+
+            <% if (loansBySchool.length === 0) { %>
+                <p class="text-muted mb-0">No loans recorded yet.</p>
+            <% } else { %>
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0">
+                        <thead>
+                            <tr class="text-muted small text-uppercase">
+                                <th>School</th>
+                                <th>Total Loans</th>
+                                <th>Currently Active</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% loansBySchool.forEach(function(s) { %>
+                                <tr>
+                                    <td class="fw-semibold"><%= s.schoolName %></td>
+                                    <td><%= s.totalLoans %></td>
+                                    <td><%= s.activeLoans %></td>
+                                </tr>
+                            <% }); %>
+                        </tbody>
+                    </table>
+                </div>
+            <% } %>
+        </section>
+
+    </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
