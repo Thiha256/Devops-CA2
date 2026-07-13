@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Laptop Rental</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="bg-light">
+
+<%- include("partials/adminNavbar") %>
+
+<div class="d-flex gap-4 p-4 align-items-start">
+    <%- include("partials/adminSidebar") %>
+
+    <main class="container py-4">
+
+        <% if (error) { %>
+            <div class="alert alert-danger d-flex align-items-center gap-2" role="alert">
+                <i class="fa-solid fa-circle-exclamation"></i>
+                <span><%= error %></span>
+            </div>
+        <% } %>
+
+        <header class="bg-white border rounded-4 p-4 mb-4">
+            <span class="text-success fw-bold text-uppercase small">Inventory Management</span>
+            <h2 class="fw-bold my-1">Edit Model</h2>
+        </header>
+
+        <section class="bg-white border rounded-4 p-4">
+            <form action="/admin/inventory/<%= model.id %>/edit" method="POST" class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold small">Brand <span class="text-danger">*</span></label>
+                    <input type="text" name="brand" class="form-control" value="<%= model.brand %>" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold small">Model Name <span class="text-danger">*</span></label>
+                    <input type="text" name="model_name" class="form-control" value="<%= model.model_name %>" required>
+                </div>
+
+                <div class="col-12">
+                    <label class="form-label fw-semibold small">CPU <span class="text-danger">*</span></label>
+                    <input type="text" name="cpu" class="form-control" value="<%= model.cpu %>" required>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold small">RAM (GB) <span class="text-danger">*</span></label>
+                    <input type="number" name="ram" class="form-control" value="<%= model.ram %>" min="1" required>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold small">Storage (GB) <span class="text-danger">*</span></label>
+                    <input type="number" name="storage" class="form-control" value="<%= model.storage %>" min="1" required>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold small">Graphics Type <span class="text-danger">*</span></label>
+                    <select name="graphics_type" class="form-select" required>
+                        <option value="integrated" <%= model.graphics_type === 'integrated' ? 'selected' : '' %>>Integrated</option>
+                        <option value="dedicated" <%= model.graphics_type === 'dedicated' ? 'selected' : '' %>>Dedicated</option>
+                    </select>
+                </div>
+
+                <div class="col-12">
+                    <label class="form-label fw-semibold small">Image URL <span class="text-danger">*</span></label>
+                    <input type="url" name="image_url" class="form-control" value="<%= model.image_url %>" required>
+                </div>
+
+                <div class="col-12 d-flex gap-2 mt-4">
+                    <button type="submit" class="btn btn-success fw-bold px-4">Save Changes</button>
+                    <a href="/admin" class="btn btn-outline-secondary px-4">Cancel</a>
+                </div>
+            </form>
+        </section>
+
+    </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

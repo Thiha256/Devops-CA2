@@ -14,49 +14,46 @@
 <div class="d-flex gap-4 p-4 align-items-start">
     <%- include("partials/adminSidebar") %>
 
-    <!-- No id means this is a blank model passed in for the Add form; same template serves both. -->
-    <% const isNew = !model.id; %>
-
     <main class="container py-4">
 
         <% if (error) { %>
             <div class="alert alert-danger d-flex align-items-center gap-2" role="alert">
-                <i class="fa-solid fa-triangle-exclamation"></i>
+                <i class="fa-solid fa-circle-exclamation"></i>
                 <span><%= error %></span>
             </div>
         <% } %>
 
         <header class="bg-white border rounded-4 p-4 mb-4">
             <span class="text-success fw-bold text-uppercase small">Inventory Management</span>
-            <h2 class="fw-bold my-1"><%= isNew ? 'Add Model' : 'Edit Model' %></h2>
+            <h2 class="fw-bold my-1">Add Model</h2>
         </header>
 
         <section class="bg-white border rounded-4 p-4">
-            <form action="<%= isNew ? '/admin/inventory/new' : '/admin/inventory/' + model.id + '/edit' %>" method="POST" class="row g-3">
+            <form action="/admin/inventory/new" method="POST" class="row g-3">
                 <div class="col-md-6">
-                    <label class="form-label fw-semibold small">Brand</label>
+                    <label class="form-label fw-semibold small">Brand <span class="text-danger">*</span></label>
                     <input type="text" name="brand" class="form-control" value="<%= model.brand %>" required>
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label fw-semibold small">Model Name</label>
+                    <label class="form-label fw-semibold small">Model Name <span class="text-danger">*</span></label>
                     <input type="text" name="model_name" class="form-control" value="<%= model.model_name %>" required>
                 </div>
 
                 <div class="col-12">
-                    <label class="form-label fw-semibold small">CPU</label>
+                    <label class="form-label fw-semibold small">CPU <span class="text-danger">*</span></label>
                     <input type="text" name="cpu" class="form-control" value="<%= model.cpu %>" required>
                 </div>
 
                 <div class="col-md-4">
-                    <label class="form-label fw-semibold small">RAM (GB)</label>
+                    <label class="form-label fw-semibold small">RAM (GB) <span class="text-danger">*</span></label>
                     <input type="number" name="ram" class="form-control" value="<%= model.ram %>" min="1" required>
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label fw-semibold small">Storage (GB)</label>
+                    <label class="form-label fw-semibold small">Storage (GB) <span class="text-danger">*</span></label>
                     <input type="number" name="storage" class="form-control" value="<%= model.storage %>" min="1" required>
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label fw-semibold small">Graphics Type</label>
+                    <label class="form-label fw-semibold small">Graphics Type <span class="text-danger">*</span></label>
                     <select name="graphics_type" class="form-select" required>
                         <option value="integrated" <%= model.graphics_type === 'integrated' ? 'selected' : '' %>>Integrated</option>
                         <option value="dedicated" <%= model.graphics_type === 'dedicated' ? 'selected' : '' %>>Dedicated</option>
@@ -64,12 +61,12 @@
                 </div>
 
                 <div class="col-12">
-                    <label class="form-label fw-semibold small">Image URL</label>
+                    <label class="form-label fw-semibold small">Image URL <span class="text-danger">*</span></label>
                     <input type="url" name="image_url" class="form-control" value="<%= model.image_url %>" required>
                 </div>
 
                 <div class="col-12 d-flex gap-2 mt-4">
-                    <button type="submit" class="btn btn-success fw-bold px-4"><%= isNew ? 'Add Model' : 'Save Changes' %></button>
+                    <button type="submit" class="btn btn-success fw-bold px-4">Add Model</button>
                     <a href="/admin" class="btn btn-outline-secondary px-4">Cancel</a>
                 </div>
             </form>
