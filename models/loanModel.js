@@ -140,7 +140,14 @@ async function createLoanRequest(userId, schoolName, modelId, reason, remarks) {
 
     console.log("New loan request inserted into SQL. Request ID:", result.insertId);
 
-    return { ok: true };
+    // Return the model's display name so the route can build a notification.
+    const [[model]] = await db.execute(`
+        SELECT CONCAT(brand, ' ', model_name) AS modelName
+        FROM laptop_model
+        WHERE model_id = ?
+    `, [modelId]);
+
+    return { ok: true, modelName: model ? model.modelName : "your device" };
 }
 
 async function getRequestsByUser(userId) {
@@ -342,7 +349,23 @@ async function approveRequest(requestId, adminId) {
         `, [laptopId, request.user_id]);
 
         await connection.commit();
-        return { ok: true };
+
+        // After the loan is committed, look up who to notify + which device,
+        // so the route can send the "approved" notification/email.
+        const [[info]] = await db.execute(`
+            SELECT u.name, u.email, CONCAT(lm.brand, ' ', lm.model_name) AS modelName
+            FROM user u
+            JOIN laptop_model lm ON lm.model_id = ?
+            WHERE u.user_id = ?
+        `, [request.model_id, request.user_id]);
+
+        return {
+            ok: true,
+            student: info
+                ? { userId: request.user_id, name: info.name, email: info.email }
+                : null,
+            modelName: info ? info.modelName : "your device"
+        };
     } catch (err) {
         await connection.rollback();
         console.error("Approve request error:", err.message);
@@ -353,6 +376,17 @@ async function approveRequest(requestId, adminId) {
 }
 
 async function rejectRequest(requestId, adminId) {
+    // Look up who made the request (and for which model) before we change it,
+    // so the route can notify that student their request was rejected.
+    const [[info]] = await db.execute(`
+        SELECT lr.user_id, u.name, u.email,
+               CONCAT(lm.brand, ' ', lm.model_name) AS modelName
+        FROM loan_request lr
+        JOIN user u ON u.user_id = lr.user_id
+        JOIN laptop_model lm ON lm.model_id = lr.model_id
+        WHERE lr.request_id = ?
+    `, [requestId]);
+
     await db.execute(`
         UPDATE loan_request
         SET status = 'rejected',
@@ -362,7 +396,13 @@ async function rejectRequest(requestId, adminId) {
         AND status = 'pending'
     `, [adminId, requestId]);
 
-    return { ok: true };
+    return {
+        ok: true,
+        student: info
+            ? { userId: info.user_id, name: info.name, email: info.email }
+            : null,
+        modelName: info ? info.modelName : "your device"
+    };
 }
 
 async function returnLoan(userId, loanId) {
@@ -372,7 +412,7 @@ async function returnLoan(userId, loanId) {
         await connection.beginTransaction();
 
         const [rows] = await connection.execute(`
-            SELECT loan_id, laptop_id, return_date
+            SELECT loan_id, laptop_id, return_date, due_date
             FROM loan
             WHERE loan_id = ?
             AND user_id = ?
@@ -401,8 +441,39 @@ async function returnLoan(userId, loanId) {
             WHERE laptop_id = ?
         `, [rows[0].laptop_id]);
 
+        // Work out if this return is late. return_date was just set to today,
+        // so days late = today - due_date (compared at midnight to ignore time).
+        const due = new Date(rows[0].due_date);
+        const today = new Date();
+        const dueMidnight = new Date(due.getFullYear(), due.getMonth(), due.getDate());
+        const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        const daysLate = Math.round((todayMidnight - dueMidnight) / (1000 * 60 * 60 * 24));
+
+        // If overdue, raise a fine in the SAME transaction so the return and the
+        // fine either both commit or both roll back. Rate is $/day from .env.
+        let fine = null;
+        if (daysLate > 0) {
+            const rate = Number(process.env.FINE_RATE_PER_DAY) || 1;
+            const amount = daysLate * rate;
+            await connection.execute(`
+                INSERT INTO fine (loan_id, amount_paid, is_paid, paid_at)
+                VALUES (?, ?, 0, NULL)
+            `, [loanId, amount]);
+            fine = { amount, daysLate };
+        }
+
         await connection.commit();
-        return { ok: true };
+
+        // Fetch the device name (outside the transaction) for the notification.
+        const [[m]] = await db.execute(`
+            SELECT CONCAT(lm.brand, ' ', lm.model_name) AS modelName
+            FROM loan lo
+            JOIN laptop l ON l.laptop_id = lo.laptop_id
+            JOIN laptop_model lm ON lm.model_id = l.model_id
+            WHERE lo.loan_id = ?
+        `, [loanId]);
+
+        return { ok: true, modelName: m ? m.modelName : "your device", fine };
     } catch (err) {
         await connection.rollback();
         console.error("Return loan error:", err.message);
@@ -410,6 +481,46 @@ async function returnLoan(userId, loanId) {
     } finally {
         connection.release();
     }
+}
+
+// Active loans (not yet returned) that are overdue OR due within `dueSoonDays`.
+// The scheduled n8n workflow hits an endpoint that calls this, then notifies
+// each borrower. Returns a ready-to-use type + message per loan.
+async function getReminderCandidates(dueSoonDays = 2) {
+    const [rows] = await db.execute(`
+        SELECT
+            lo.loan_id,
+            lo.user_id,
+            u.name,
+            u.email,
+            CONCAT(lm.brand, ' ', lm.model_name) AS modelName,
+            DATEDIFF(lo.due_date, CURDATE()) AS daysToDue
+        FROM loan lo
+        JOIN user u ON u.user_id = lo.user_id
+        JOIN laptop l ON l.laptop_id = lo.laptop_id
+        JOIN laptop_model lm ON lm.model_id = l.model_id
+        WHERE lo.return_date IS NULL
+          AND DATEDIFF(lo.due_date, CURDATE()) <= ?
+        ORDER BY lo.due_date ASC
+    `, [dueSoonDays]);
+
+    return rows.map(r => {
+        const days = Number(r.daysToDue);
+        let type, message;
+
+        if (days < 0) {
+            type = "loan_overdue";
+            message = `Your loan of ${r.modelName} is ${Math.abs(days)} day(s) overdue. Please return it to avoid further penalties.`;
+        } else if (days === 0) {
+            type = "loan_due_soon";
+            message = `Your loan of ${r.modelName} is due today. Please return it on time.`;
+        } else {
+            type = "loan_due_soon";
+            message = `Your loan of ${r.modelName} is due in ${days} day(s). Please return it on time.`;
+        }
+
+        return { userId: r.user_id, email: r.email, name: r.name, type, message };
+    });
 }
 
 module.exports = {
@@ -424,5 +535,6 @@ module.exports = {
     getAllLoans,
     approveRequest,
     rejectRequest,
-    returnLoan
+    returnLoan,
+    getReminderCandidates
 };

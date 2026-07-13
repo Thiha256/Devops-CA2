@@ -1,0 +1,134 @@
+{
+  "name": "RP Resource Centre - Notifications (Combined)",
+  "active": false,
+  "settings": {},
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "rp-notify",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "node-webhook",
+      "name": "Webhook (events)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 200],
+      "webhookId": "rp-notify"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "e1", "name": "email",   "value": "={{ $json.body.email }}", "type": "string" },
+            { "id": "e2", "name": "name",    "value": "={{ $json.body.name }}", "type": "string" },
+            { "id": "e3", "name": "message", "value": "={{ $json.body.message }}", "type": "string" },
+            { "id": "e4", "name": "subject", "value": "=RP Resource Centre - {{ $json.body.type }}", "type": "string" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-set-event",
+      "name": "Normalize event",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [460, 200]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            { "field": "days", "daysInterval": 1, "triggerAtHour": 8, "triggerAtMinute": 0 }
+          ]
+        }
+      },
+      "id": "node-schedule",
+      "name": "Every day 8am",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 460]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:3001/api/notifications/run-reminders",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [ { "name": "token", "value": "change-me" } ]
+        },
+        "options": {}
+      },
+      "id": "node-http",
+      "name": "Get due-soon loans",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [460, 460]
+    },
+    {
+      "parameters": { "fieldToSplitOut": "notifications", "options": {} },
+      "id": "node-split",
+      "name": "Split notifications",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [680, 460]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "r1", "name": "email",   "value": "={{ $json.email }}", "type": "string" },
+            { "id": "r2", "name": "name",    "value": "={{ $json.name }}", "type": "string" },
+            { "id": "r3", "name": "message", "value": "={{ $json.message }}", "type": "string" },
+            { "id": "r4", "name": "subject", "value": "=RP Resource Centre - Loan Reminder", "type": "string" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-set-reminder",
+      "name": "Normalize reminder",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [900, 460]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.email }}",
+        "subject": "={{ $json.subject }}",
+        "emailType": "text",
+        "message": "=Hi {{ $json.name }},\n\n{{ $json.message }}\n\n- RP Resource Centre",
+        "options": {}
+      },
+      "id": "node-gmail",
+      "name": "Send Email (Gmail)",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1160, 320],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_WITH_YOUR_GMAIL_CREDENTIAL",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook (events)": {
+      "main": [ [ { "node": "Normalize event", "type": "main", "index": 0 } ] ]
+    },
+    "Normalize event": {
+      "main": [ [ { "node": "Send Email (Gmail)", "type": "main", "index": 0 } ] ]
+    },
+    "Every day 8am": {
+      "main": [ [ { "node": "Get due-soon loans", "type": "main", "index": 0 } ] ]
+    },
+    "Get due-soon loans": {
+      "main": [ [ { "node": "Split notifications", "type": "main", "index": 0 } ] ]
+    },
+    "Split notifications": {
+      "main": [ [ { "node": "Normalize reminder", "type": "main", "index": 0 } ] ]
+    },
+    "Normalize reminder": {
+      "main": [ [ { "node": "Send Email (Gmail)", "type": "main", "index": 0 } ] ]
+    }
+  }
+}

@@ -8,6 +8,8 @@ const { getModelsWithStats, getModelStatsById, deleteModel, getModelById, update
 const { getAssetsByModel, createAsset, deleteAsset } = require("./models/assetModel");
 const loanModel = require("./models/loanModel");
 const reportModel = require("./models/reportModel");
+const notificationModel = require("./models/notificationModel");
+const { notifyUser } = require("./lib/notify");
 
 const app = express();
 
@@ -23,6 +25,25 @@ app.use(session({
     saveUninitialized: false,
     cookie: { maxAge: 1000 * 60 * 60 }
 }));
+
+// On every request, load the logged-in user's notifications so the navbar bell
+// (rendered on every page) can show the unread count + dropdown list. Exposed
+// via res.locals, which EJS templates read without each route passing them in.
+app.use(async (req, res, next) => {
+    res.locals.notifications = [];
+    res.locals.unreadCount = 0;
+
+    if (req.session.user) {
+        try {
+            res.locals.notifications = await notificationModel.getRecentByUser(req.session.user.id);
+            res.locals.unreadCount = await notificationModel.getUnreadCount(req.session.user.id);
+        } catch (err) {
+            console.error("Loading notifications failed:", err.message);
+        }
+    }
+
+    next();
+});
 
 // Sample data (fills in profile fields not stored in the DB)
 const sampleProfile = {
@@ -445,6 +466,15 @@ app.post("/loans/request", requireLogin, async (req, res) => {
         return res.redirect("/browse?error=" + encodeURIComponent(result.error));
     }
 
+    // Notify the student their request is in (in-app bell + n8n email).
+    await notifyUser({
+        userId: req.session.user.id,
+        email: student.email,
+        name: student.name,
+        type: "request_submitted",
+        message: `Your loan request for ${result.modelName} has been submitted and is pending admin approval.`
+    });
+
     return res.redirect("/loans?success=" + encodeURIComponent(
         "Loan request submitted! You'll see it as Pending until an admin approves it."
     ));
@@ -484,6 +514,28 @@ app.post("/loans/request/:id/cancel", requireLogin, async (req, res) => {
 app.post("/loans/:id/return", requireLogin, async (req, res) => {
     const result = await loanModel.returnLoan(req.session.user.id, req.params.id);
 
+    if (result.ok) {
+        // Confirm the return...
+        await notifyUser({
+            userId: req.session.user.id,
+            email: req.session.user.email,
+            name: req.session.user.name,
+            type: "loan_returned",
+            message: `You've returned ${result.modelName}. Thank you!`
+        });
+
+        // ...and if it was late, tell them about the fine that was raised.
+        if (result.fine) {
+            await notifyUser({
+                userId: req.session.user.id,
+                email: req.session.user.email,
+                name: req.session.user.name,
+                type: "fine_issued",
+                message: `A late-return fine of $${result.fine.amount} was issued for returning ${result.modelName} ${result.fine.daysLate} day(s) late.`
+            });
+        }
+    }
+
     const msg = result.ok
         ? "success=" + encodeURIComponent("Laptop returned. Thank you!")
         : "error=" + encodeURIComponent(result.error);
@@ -494,6 +546,17 @@ app.post("/loans/:id/return", requireLogin, async (req, res) => {
 // Admin approves a pending loan request -> creates an active loan.
 app.post("/admin/loans/requests/:id/approve", requireAdmin, async (req, res) => {
     const result = await loanModel.approveRequest(req.params.id, req.session.user.id);
+
+    // Notify the student (not the admin) that their request was approved.
+    if (result.ok && result.student) {
+        await notifyUser({
+            userId: result.student.userId,
+            email: result.student.email,
+            name: result.student.name,
+            type: "request_approved",
+            message: `Good news! Your loan request for ${result.modelName} has been approved.`
+        });
+    }
 
     const msg = result.ok
         ? "success=" + encodeURIComponent("Request approved, loan created.")
@@ -506,11 +569,66 @@ app.post("/admin/loans/requests/:id/approve", requireAdmin, async (req, res) => 
 app.post("/admin/loans/requests/:id/reject", requireAdmin, async (req, res) => {
     const result = await loanModel.rejectRequest(req.params.id, req.session.user.id);
 
+    // Notify the student their request was rejected.
+    if (result.ok && result.student) {
+        await notifyUser({
+            userId: result.student.userId,
+            email: result.student.email,
+            name: result.student.name,
+            type: "request_rejected",
+            message: `Your loan request for ${result.modelName} has been rejected. Please contact the Resource Centre for details.`
+        });
+    }
+
     const msg = result.ok
         ? "success=" + encodeURIComponent("Request rejected.")
         : "error=" + encodeURIComponent(result.error);
 
     res.redirect("/admin/loans?" + msg);
+});
+
+// ---------- Notifications ----------
+
+// The bell links here. Show the user's notifications, then mark them all read
+// so the unread badge clears. The list itself comes from res.locals, but we
+// re-query with a higher limit so the full page shows more than the dropdown.
+app.get("/notifications", requireLogin, async (req, res) => {
+    const notifications = await notificationModel.getRecentByUser(req.session.user.id, 50);
+    await notificationModel.markAllRead(req.session.user.id);
+    res.locals.unreadCount = 0; // reflect the "read" state on this same render
+
+    res.render("notifications", {
+        title: "Notifications",
+        page: "notifications",
+        student: currentStudent(req),
+        notifications
+    });
+});
+
+// Endpoint the scheduled n8n workflow calls (daily). It creates in-app
+// reminders for loans due soon / overdue and returns the list so n8n can
+// email each borrower. Protected by a shared secret in CRON_SECRET so it
+// can't be triggered by just anyone.
+app.get("/api/notifications/run-reminders", async (req, res) => {
+    const token = req.query.token || req.get("x-cron-token");
+    if (!process.env.CRON_SECRET || token !== process.env.CRON_SECRET) {
+        return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const dueSoonDays = Number(process.env.DUE_SOON_DAYS) || 2;
+    const candidates = await loanModel.getReminderCandidates(dueSoonDays);
+
+    // createNotificationOnce dedupes, so running the cron repeatedly in a day
+    // won't spam. Only freshly-created reminders are returned for emailing.
+    const sent = [];
+    for (const c of candidates) {
+        const created = await notificationModel.createNotificationOnce(c.userId, c.type, c.message);
+        if (created) {
+            sent.push({ email: c.email, name: c.name, type: c.type, message: c.message });
+        }
+    }
+
+    res.json({ count: sent.length, notifications: sent });
 });
 
 app.get("/profile", requireLogin, async (req, res) => {
