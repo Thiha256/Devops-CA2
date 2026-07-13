@@ -291,7 +291,7 @@ async function getAllLoans() {
     });
 }
 
-async function approveRequest(requestId, adminId) {
+async function approveRequest(requestId, adminId, remarks = null) {
     const connection = await db.getConnection();
 
     try {
@@ -331,9 +331,10 @@ async function approveRequest(requestId, adminId) {
             UPDATE loan_request
             SET status = 'approved',
                 reviewed_by = ?,
-                reviewed_at = NOW()
+                reviewed_at = NOW(),
+                remarks = COALESCE(NULLIF(?, ''), remarks)
             WHERE request_id = ?
-        `, [adminId, requestId]);
+        `, [adminId, remarks, requestId]);
 
         await connection.execute(`
             UPDATE laptop
@@ -375,7 +376,7 @@ async function approveRequest(requestId, adminId) {
     }
 }
 
-async function rejectRequest(requestId, adminId) {
+async function rejectRequest(requestId, adminId, remarks = null) {
     // Look up who made the request (and for which model) before we change it,
     // so the route can notify that student their request was rejected.
     const [[info]] = await db.execute(`
@@ -391,10 +392,11 @@ async function rejectRequest(requestId, adminId) {
         UPDATE loan_request
         SET status = 'rejected',
             reviewed_by = ?,
-            reviewed_at = NOW()
+            reviewed_at = NOW(),
+            remarks = COALESCE(NULLIF(?, ''), remarks)
         WHERE request_id = ?
         AND status = 'pending'
-    `, [adminId, requestId]);
+    `, [adminId, remarks, requestId]);
 
     return {
         ok: true,
@@ -405,19 +407,26 @@ async function rejectRequest(requestId, adminId) {
     };
 }
 
-async function returnLoan(userId, loanId) {
+// Returns are handled by an admin, so this looks up the loan by id alone
+// (not restricted to one user). The admin also sets the laptop's resulting
+// status ('available' or 'maintenance') and an optional reason. The loan
+// owner's details are returned so the caller can notify that student.
+async function returnLoan(loanId, status = "available", reason = null) {
+    // Only these two outcomes make sense on return; anything else -> available.
+    const laptopStatus = status === "maintenance" ? "maintenance" : "available";
+    const maintReason = laptopStatus === "maintenance" ? (reason || null) : null;
+
     const connection = await db.getConnection();
 
     try {
         await connection.beginTransaction();
 
         const [rows] = await connection.execute(`
-            SELECT loan_id, laptop_id, return_date, due_date
+            SELECT loan_id, laptop_id, user_id, return_date, due_date
             FROM loan
             WHERE loan_id = ?
-            AND user_id = ?
             FOR UPDATE
-        `, [loanId, userId]);
+        `, [loanId]);
 
         if (rows.length === 0) {
             await connection.rollback();
@@ -437,9 +446,9 @@ async function returnLoan(userId, loanId) {
 
         await connection.execute(`
             UPDATE laptop
-            SET status = 'available'
+            SET status = ?, maint_reason = ?
             WHERE laptop_id = ?
-        `, [rows[0].laptop_id]);
+        `, [laptopStatus, maintReason, rows[0].laptop_id]);
 
         // Work out if this return is late. return_date was just set to today,
         // so days late = today - due_date (compared at midnight to ignore time).
@@ -464,16 +473,27 @@ async function returnLoan(userId, loanId) {
 
         await connection.commit();
 
-        // Fetch the device name (outside the transaction) for the notification.
+        // Fetch the device name + the loan owner's details (outside the
+        // transaction) so the admin's return can notify the right student.
         const [[m]] = await db.execute(`
-            SELECT CONCAT(lm.brand, ' ', lm.model_name) AS modelName
+            SELECT CONCAT(lm.brand, ' ', lm.model_name) AS modelName,
+                   u.user_id, u.email, u.name
             FROM loan lo
             JOIN laptop l ON l.laptop_id = lo.laptop_id
             JOIN laptop_model lm ON lm.model_id = l.model_id
+            JOIN user u ON u.user_id = lo.user_id
             WHERE lo.loan_id = ?
         `, [loanId]);
 
-        return { ok: true, modelName: m ? m.modelName : "your device", fine };
+        return {
+            ok: true,
+            modelName: m ? m.modelName : "the device",
+            fine,
+            status: laptopStatus,
+            userId: rows[0].user_id,
+            email: m ? m.email : null,
+            name: m ? m.name : null
+        };
     } catch (err) {
         await connection.rollback();
         console.error("Return loan error:", err.message);
