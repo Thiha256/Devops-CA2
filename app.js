@@ -5,7 +5,7 @@ const bcrypt = require("bcryptjs");
 
 const { getUserByEmail } = require("./models/userModel");
 const { getModelsWithStats, getModelStatsById, deleteModel, getModelById, updateModel, createModel } = require("./models/laptopModel");
-const { getAssetsByModel, createAsset, deleteAsset } = require("./models/assetModel");
+const { getAssetsByModel, createAsset, getAssetById, updateAsset, deleteAsset } = require("./models/assetModel");
 const loanModel = require("./models/loanModel");
 const reportModel = require("./models/reportModel");
 const notificationModel = require("./models/notificationModel");
@@ -249,10 +249,9 @@ app.post('/admin/inventory/:id/delete', requireAdmin, async (req, res) => {
     }
 });
 
-// Add model form. Shares modelForm.ejs with the edit form — an id-less
-// model object tells the template to render as "Add" and POST to /new.
+// Serve add model form.
 app.get('/admin/inventory/new', requireAdmin, (req, res) => {
-    res.render('admin/modelForm', {
+    res.render('admin/addModelForm', {
         page: 'inventory',
         admin: req.session.user,
         model: {},
@@ -260,6 +259,7 @@ app.get('/admin/inventory/new', requireAdmin, (req, res) => {
     });
 });
 
+// Process adding model form
 app.post('/admin/inventory/new', requireAdmin, async (req, res) => {
     const { brand, model_name, cpu, ram, storage, graphics_type, image_url } = req.body;
     try {
@@ -267,7 +267,7 @@ app.post('/admin/inventory/new', requireAdmin, async (req, res) => {
         res.redirect('/admin');
     } catch (err) {
         console.error('Create model error:', err.message);
-        res.render('admin/modelForm', {
+        res.render('admin/addModelForm', {
             page: 'inventory',
             admin: req.session.user,
             model: { brand, model_name, cpu, ram, storage, graphics_type, image_url },
@@ -276,10 +276,53 @@ app.post('/admin/inventory/new', requireAdmin, async (req, res) => {
     }
 });
 
+
+// Serve edit model form, pre-filled with that one model's current details.
+app.get('/admin/inventory/:id/edit', requireAdmin, async (req, res) => {
+    const model = await getModelById(req.params.id);
+    // if no model is found, render the adminPage instead
+    if (!model) {
+        const allModels = await getModelsWithStats();
+        return res.render('admin/adminPage', {
+            page: 'inventory',
+            admin: req.session.user,
+            models: allModels,
+            query: '',
+            error: 'That model could not be found.'
+        });
+    }
+    res.render('admin/editModelForm', {
+        page: 'inventory',
+        admin: req.session.user,
+        model,
+        error: null
+    });
+});
+
+// Process model edit form
+app.post('/admin/inventory/:id/edit', requireAdmin, async (req, res) => {
+    const { brand, model_name, cpu, ram, storage, graphics_type, image_url } = req.body;
+    try {
+        await updateModel(req.params.id, brand, model_name, cpu, ram, storage, graphics_type, image_url);
+        res.redirect('/admin');
+    } catch (err) {
+        console.error('Update model error:', err.message);
+        const model = await getModelById(req.params.id);
+        res.render('admin/editModelForm', {
+            page: 'inventory',
+            admin: req.session.user,
+            model: model || { id: req.params.id, brand, model_name, cpu, ram, storage, graphics_type, image_url },
+            error: 'Something went wrong updating this model.'
+        });
+    }
+});
+
 // Per-model asset manager: lists every physical laptop unit for one model,
 // with optional serial/asset id search and status filter.
 app.get('/admin/inventory/:id', requireAdmin, async (req, res) => {
     const model = await getModelStatsById(req.params.id);
+    // Go back to the inventory list with an error instead of rendering this
+    // page against an undefined model (eg. bad :id in the URL).
     if (!model) {
         const allModels = await getModelsWithStats();
         return res.render('admin/adminPage', {
@@ -293,12 +336,13 @@ app.get('/admin/inventory/:id', requireAdmin, async (req, res) => {
 
     const query = req.query.q || "";
     const status = req.query.status || "";
+    const q = query.toLowerCase();
 
     const allAssets = await getAssetsByModel(req.params.id);
     const assets = allAssets.filter(asset => {
         const matchesQuery = !query ||
-            asset.asset_id.toLowerCase().includes(query.toLowerCase()) ||
-            asset.serial_no.toLowerCase().includes(query.toLowerCase());
+            asset.asset_id.toLowerCase().includes(q) ||
+            asset.serial_no.toLowerCase().includes(q);
         const matchesStatus = !status || asset.status === status;
         return matchesQuery && matchesStatus;
     });
@@ -313,6 +357,8 @@ app.get('/admin/inventory/:id', requireAdmin, async (req, res) => {
     });
 });
 
+
+// Delete laptop/asset from a specific model
 app.post('/admin/inventory/:id/assets/:laptopId/delete', requireAdmin, async (req, res) => {
     try {
         await deleteAsset(req.params.laptopId);
@@ -322,7 +368,7 @@ app.post('/admin/inventory/:id/assets/:laptopId/delete', requireAdmin, async (re
     res.redirect('/admin/inventory/' + req.params.id);
 });
 
-// Add asset form, scoped to one model.
+// Add asset form for a specific model
 app.get('/admin/inventory/:id/assets/new', requireAdmin, async (req, res) => {
     const model = await getModelStatsById(req.params.id);
     if (!model) {
@@ -336,7 +382,7 @@ app.get('/admin/inventory/:id/assets/new', requireAdmin, async (req, res) => {
         });
     }
 
-    res.render('admin/assetForm', {
+    res.render('admin/addAssetForm', {
         page: 'inventory',
         admin: req.session.user,
         model,
@@ -346,6 +392,8 @@ app.get('/admin/inventory/:id/assets/new', requireAdmin, async (req, res) => {
     });
 });
 
+
+// Process creating new asset for a specific model
 app.post('/admin/inventory/:id/assets/new', requireAdmin, async (req, res) => {
     const { asset_number, serial_no } = req.body;
     const asset_id = 'LAP' + asset_number.padStart(3, '0');
@@ -359,7 +407,7 @@ app.post('/admin/inventory/:id/assets/new', requireAdmin, async (req, res) => {
         }
 
         const model = await getModelStatsById(req.params.id);
-        res.render('admin/assetForm', {
+        res.render('admin/addAssetForm', {
             page: 'inventory',
             admin: req.session.user,
             model,
@@ -372,44 +420,65 @@ app.post('/admin/inventory/:id/assets/new', requireAdmin, async (req, res) => {
     }
 });
 
-// Edit model form, pre-filled with that one model's current details.
-app.get('/admin/inventory/:id/edit', requireAdmin, async (req, res) => {
-    const model = await getModelById(req.params.id);
-    // if no model is found, render the adminPage instead
-    if (!model) {
+// Serve edit asset form, pre-filled with that one asset's current details.
+app.get('/admin/inventory/:id/assets/:laptopId/edit', requireAdmin, async (req, res) => {
+    const model = await getModelStatsById(req.params.id);
+    const asset = model ? await getAssetById(req.params.laptopId) : null;
+
+    if (!model || !asset) {
         const allModels = await getModelsWithStats();
         return res.render('admin/adminPage', {
             page: 'inventory',
             admin: req.session.user,
             models: allModels,
             query: '',
-            error: 'That model could not be found.'
+            error: !model ? 'That model could not be found.' : 'That asset could not be found.'
         });
     }
-    res.render('admin/modelForm', {
+
+    res.render('admin/editAssetForm', {
         page: 'inventory',
         admin: req.session.user,
         model,
+        laptopId: asset.laptop_id,
+        asset_number: asset.asset_id.replace(/^LAP0*/, '') || '0',
+        serial_no: asset.serial_no,
+        status: asset.status,
+        maint_reason: asset.maint_reason,
         error: null
     });
 });
 
-app.post('/admin/inventory/:id/edit', requireAdmin, async (req, res) => {
-    const { brand, model_name, cpu, ram, storage, graphics_type, image_url } = req.body;
+// Process edit asset form
+app.post('/admin/inventory/:id/assets/:laptopId/edit', requireAdmin, async (req, res) => {
+    const { asset_number, serial_no, status, maint_reason } = req.body;
+    const asset_id = 'LAP' + asset_number.padStart(3, '0');
     try {
-        await updateModel(req.params.id, brand, model_name, cpu, ram, storage, graphics_type, image_url);
-        res.redirect('/admin');
+        await updateAsset(req.params.laptopId, asset_id, serial_no, status, maint_reason);
+        res.redirect('/admin/inventory/' + req.params.id);
     } catch (err) {
-        console.error('Update model error:', err.message);
-        const model = await getModelById(req.params.id);
-        res.render('admin/modelForm', {
+        const isDuplicate = err.code === 'ER_DUP_ENTRY';
+        if (!isDuplicate) {
+            console.error('Update asset error:', err.message);
+        }
+
+        const model = await getModelStatsById(req.params.id);
+        res.render('admin/editAssetForm', {
             page: 'inventory',
             admin: req.session.user,
-            model: model || { id: req.params.id, brand, model_name, cpu, ram, storage, graphics_type, image_url },
-            error: 'Something went wrong updating this model.'
+            model,
+            laptopId: req.params.laptopId,
+            asset_number,
+            serial_no,
+            status,
+            maint_reason,
+            error: isDuplicate
+                ? 'That Asset ID or Serial Number is already in use.'
+                : 'Something went wrong updating this asset.'
         });
     }
 });
+
 
 // ---------- Admin: loan requests & active loans ----------
 
