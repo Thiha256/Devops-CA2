@@ -22,9 +22,28 @@ async function createAsset(modelId, asset_id, serial_no) {
     );
 }
 
+async function getAssetById(laptopId) {
+    const [rows] = await db.execute(`
+        SELECT laptop_id, model_id, asset_id, serial_no, status, maint_reason
+        FROM laptop
+        WHERE laptop_id = ?`,
+        [laptopId]
+    );
+    return rows[0];
+}
+
+async function updateAsset(laptopId, asset_id, serial_no, status, maint_reason) {
+    await db.execute(`
+        UPDATE laptop
+        SET asset_id = ?, serial_no = ?, status = ?, maint_reason = ?
+        WHERE laptop_id = ?`,
+        [asset_id, serial_no, status, status === 'maintenance' ? maint_reason : null, laptopId]
+    );
+}
+
 // Throws (mysql error code ER_ROW_IS_REFERENCED_2) if any loan still references it.
 async function deleteAsset(laptopId) {
     await db.execute(`DELETE FROM laptop WHERE laptop_id = ?`, [laptopId]);
 }
 
-module.exports = { getAssetsByModel, createAsset, deleteAsset };
+module.exports = { getAssetsByModel, createAsset, getAssetById, updateAsset, deleteAsset };

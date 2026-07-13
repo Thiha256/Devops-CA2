@@ -91,7 +91,7 @@
                                         <% } %>
                                     </td>
                                     <td>
-                                        <a href="#" class="text-success text-decoration-none small fw-semibold me-2"><i class="fa-solid fa-pen me-1"></i>Edit</a>
+                                        <a href="/admin/inventory/<%= model.id %>/assets/<%= asset.laptop_id %>/edit" class="text-success text-decoration-none small fw-semibold me-2"><i class="fa-solid fa-pen me-1"></i>Edit</a>
                                         <form action="/admin/inventory/<%= model.id %>/assets/<%= asset.laptop_id %>/delete" method="POST"
                                               class="d-inline"
                                               onsubmit="return confirm('Delete asset <%= asset.asset_id %>? This cannot be undone.');">
