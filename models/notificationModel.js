@@ -1,3 +1,6 @@
+// =====================================================================
+// Devops-CA2 — Notification model — Implemented by: Lin Htut Win
+// =====================================================================
 const db = require("../database");
 
 // Insert a new in-app notification for one user. Returns the new row's id.

@@ -11,6 +11,10 @@
 
 <body class="bg-light">
 
+<!-- =====================================================================
+     Devops-CA2 — Admin Profile (whole page + audit log) — Implemented by: Lin Htut Win
+     ===================================================================== -->
+
 <%- include("partials/adminNavbar") %>
 
 <div class="d-flex gap-4 p-4 align-items-start">
@@ -111,10 +115,11 @@
             <% if (activity.length === 0) { %>
                 <p class="text-muted text-center py-4 mb-0">No activity recorded yet.</p>
             <% } else { %>
+                <style>.log-extra { display: none !important; }</style>
                 <ul class="list-unstyled mb-0">
-                    <% activity.forEach(function (a) {
+                    <% activity.forEach(function (a, idx) {
                         const s = auditStyle(a.action_type); %>
-                        <li class="d-flex align-items-center gap-3 border-bottom py-3">
+                        <li class="d-flex align-items-center gap-3 border-bottom py-3<%= idx >= 5 ? ' log-extra' : '' %>">
                             <div class="rounded-circle bg-<%= s.colour %> bg-opacity-10 text-<%= s.colour %> d-flex align-items-center justify-content-center flex-shrink-0" style="width:40px; height:40px;">
                                 <i class="fa-solid <%= s.icon %>"></i>
                             </div>
@@ -125,8 +130,37 @@
                         </li>
                     <% }); %>
                 </ul>
+
+                <% if (activity.length > 5) { %>
+                    <div class="text-center mt-3">
+                        <button type="button" id="toggleLogs" class="btn btn-sm btn-link text-decoration-none text-secondary fw-semibold">
+                            <span id="toggleText">Show all <%= activity.length %> logs</span>
+                            <i class="fa-solid fa-chevron-down ms-1" id="toggleIcon"></i>
+                        </button>
+                    </div>
+                <% } %>
             <% } %>
         </section>
+
+        <!-- Show-more toggle for the activity log (Implemented by: Lin Htut Win) -->
+        <script>
+            (function () {
+                const btn = document.getElementById('toggleLogs');
+                if (!btn) return;
+                const total = <%= activity.length %>;
+                const extras = document.querySelectorAll('.log-extra');
+                const icon = document.getElementById('toggleIcon');
+                const text = document.getElementById('toggleText');
+                let open = false;
+                btn.addEventListener('click', function () {
+                    open = !open;
+                    extras.forEach(function (e) { e.classList.toggle('log-extra', !open); });
+                    icon.classList.toggle('fa-chevron-down', !open);
+                    icon.classList.toggle('fa-chevron-up', open);
+                    text.textContent = open ? 'Show less' : ('Show all ' + total + ' logs');
+                });
+            })();
+        </script>
 
         <section class="bg-white border rounded-4 p-4">
 

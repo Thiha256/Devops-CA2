@@ -517,6 +517,7 @@ async function returnLoan(loanId, status = "available", reason = null) {
     }
 }
 
+// >>> Implemented by: Lin Htut Win — n8n scheduled reminder query <<<
 // Active loans (not yet returned) that are overdue OR due within `dueSoonDays`.
 // The scheduled n8n workflow hits an endpoint that calls this, then notifies
 // each borrower. Returns a ready-to-use type + message per loan.
@@ -561,6 +562,7 @@ async function getReminderCandidates(dueSoonDays = 2) {
     });
 }
 
+// >>> Implemented by: Lin Htut Win — PDF receipt data query <<<
 // All the details needed to print one loan's receipt, gathered with a JOIN
 // across loan -> laptop -> laptop_model -> user (-> school). Scoped to user_id
 // so a student can only ever download a receipt for their OWN loan.

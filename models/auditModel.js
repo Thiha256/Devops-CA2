@@ -1,3 +1,6 @@
+// =====================================================================
+// Devops-CA2 — Admin audit log (admin profile) — Implemented by: Lin Htut Win
+// =====================================================================
 const db = require("../database");
 
 // Which action_types each filter chip on the profile maps to.

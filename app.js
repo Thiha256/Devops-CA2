@@ -28,6 +28,7 @@ app.use(session({
     cookie: { maxAge: 1000 * 60 * 60 }
 }));
 
+// >>> Implemented by: Lin Htut Win — notification bell middleware <<<
 // On every request, load the logged-in user's notifications so the navbar bell
 // (rendered on every page) can show the unread count + dropdown list. Exposed
 // via res.locals, which EJS templates read without each route passing them in.
@@ -558,7 +559,7 @@ app.post("/loans/request", requireLogin, async (req, res) => {
         return res.redirect("/browse?error=" + encodeURIComponent(result.error));
     }
 
-    // Notify the student their request is in (in-app bell + n8n email).
+    // (Lin Htut Win) notification trigger — request submitted
     await notifyUser({
         userId: req.session.user.id,
         email: student.email,
@@ -605,6 +606,7 @@ app.post("/loans/request/:id/cancel", requireLogin, async (req, res) => {
     res.redirect("/loans?" + msg);
 });
 
+// >>> Implemented by: Lin Htut Win — PDF loan receipt (pdfkit) <<<
 // --- Download a PDF loan receipt (only the student's own loan) ---
 app.get("/loans/:id/receipt", requireLogin, async (req, res) => {
     // getLoanForReceipt is scoped to user_id, so this returns null (and we bail)
@@ -734,7 +736,7 @@ app.post("/admin/loans/requests/:id/approve", requireAdmin, async (req, res) => 
         req.params.id, req.session.user.id, req.body.remarks, req.body.start_date, req.body.due_date
     );
 
-    // Notify the student (not the admin) that their request was approved.
+    // (Lin Htut Win) notification trigger — request approved
     if (result.ok && result.student) {
         await notifyUser({
             userId: result.student.userId,
@@ -761,7 +763,7 @@ app.post("/admin/loans/requests/:id/approve", requireAdmin, async (req, res) => 
 app.post("/admin/loans/requests/:id/reject", requireAdmin, async (req, res) => {
     const result = await loanModel.rejectRequest(req.params.id, req.session.user.id, req.body.remarks);
 
-    // Notify the student their request was rejected.
+    // (Lin Htut Win) notification trigger — request rejected
     if (result.ok && result.student) {
         await notifyUser({
             userId: result.student.userId,
@@ -825,7 +827,7 @@ app.post("/admin/loans/:id/return", requireAdmin, async (req, res) => {
     res.redirect("/admin/loans?" + msg);
 });
 
-// ---------- Notifications ----------
+// ========== Implemented by: Lin Htut Win — Notifications routes ==========
 
 // The bell links here. Show the user's notifications, then mark them all read
 // so the unread badge clears. The list itself comes from res.locals, but we
@@ -918,6 +920,7 @@ app.post("/support", requireLogin, async (req, res) => {
     res.redirect("/support?submitted=true");
 });
 
+// >>> Implemented by: Lin Htut Win — Admin Profile + activity log route <<<
 app.get("/admin/profile", requireAdmin, async (req, res) => {
     // ?filter=logins|decisions|inventory narrows the log to those action types.
     const validFilters = ["logins", "decisions", "inventory"];
@@ -925,7 +928,8 @@ app.get("/admin/profile", requireAdmin, async (req, res) => {
 
     const activity = await auditModel.getByUser(
         req.session.user.id,
-        filter === "all" ? null : filter
+        filter === "all" ? null : filter,
+        100
     );
 
     res.render("admin/adminProfile", {
