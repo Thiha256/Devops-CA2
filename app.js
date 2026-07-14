@@ -184,6 +184,208 @@ app.get("/logout", (req, res) => {
     req.session.destroy(() => res.redirect("/welcome"));
 });
 
+// =====================================================================
+//  LOAN SYSTEM  —  the whole flow, in the order it happens
+//
+//    STEP 1  Student sends a loan request     POST /loans/request
+//    STEP 2  Student checks their requests    GET  /loans
+//    STEP 3  Student cancels a request        POST /loans/request/:id/cancel
+//    STEP 4  Admin reviews everything         GET  /admin/loans
+//    STEP 5  Admin approves a request         POST /admin/loans/requests/:id/approve
+//    STEP 6  Admin rejects a request          POST /admin/loans/requests/:id/reject
+//    STEP 7  Admin returns the laptop         POST /admin/loans/:id/return
+//
+//  A request starts out "pending". Approving it (step 5) turns it into an
+//  active loan. Returning that loan (step 7) frees the laptop and lets the
+//  admin set its new status (available / maintenance).
+// =====================================================================
+
+// --- STEP 1: student sends a loan request (submitted from the Browse page) ---
+app.post("/loans/request", requireLogin, async (req, res) => {
+    const student = currentStudent(req);
+
+    if (student.role === "admin") {
+        return res.redirect("/browse?error=" + encodeURIComponent(
+            "Admins cannot submit loan requests."
+        ));
+    }
+
+    const { model_id, reason, remarks } = req.body;
+
+    const result = await loanModel.createLoanRequest(
+        req.session.user.id,
+        student.school,
+        model_id,
+        reason,
+        remarks
+    );
+
+    if (!result.ok) {
+        return res.redirect("/browse?error=" + encodeURIComponent(result.error));
+    }
+
+    // (Lin Htut Win) notification trigger — request submitted
+    // Notify the student their request is in (in-app bell + n8n email).
+    await notifyUser({
+        userId: req.session.user.id,
+        email: student.email,
+        name: student.name,
+        type: "request_submitted",
+        message: `Your loan request for ${result.modelName} has been submitted and is pending admin approval.`
+    });
+
+    return res.redirect("/loans?success=" + encodeURIComponent(
+        "Loan request submitted! You'll see it as Pending until an admin approves it."
+    ));
+});
+
+// --- STEP 2: student views their own requests + active loans ---
+// (Admins don't have personal loans, so send them to the admin page instead.)
+app.get("/loans", requireLogin, async (req, res) => {
+    if (req.session.user.role === "admin") return res.redirect("/admin/loans");
+
+    const userId = req.session.user.id;
+    const student = currentStudent(req);
+
+    const requests = await loanModel.getRequestsByUser(userId);
+    const loans = await loanModel.getLoansByUser(userId);
+
+    res.render("loans", {
+        title: "My Loans",
+        page: "loans",
+        student,
+        requests,
+        loans,
+        error: req.query.error || null,
+        success: req.query.success || null
+    });
+});
+
+// --- STEP 3: student cancels one of their still-pending requests ---
+app.post("/loans/request/:id/cancel", requireLogin, async (req, res) => {
+    const result = await loanModel.cancelRequest(req.session.user.id, req.params.id);
+
+    const msg = result.ok
+        ? "success=" + encodeURIComponent("Request cancelled.")
+        : "error=" + encodeURIComponent(result.error);
+
+    res.redirect("/loans?" + msg);
+});
+
+// --- STEP 4: admin sees every pending request + every active loan ---
+app.get('/admin/loans', requireAdmin, async (req, res) => {
+    const requests = await loanModel.getAllRequests();
+    const loans = await loanModel.getAllLoans();
+
+    res.render('admin/adminLoans', {
+        page: 'loans',
+        admin: req.session.user,
+        pendingRequests: requests.filter(r => r.status === 'pending'),
+        activeLoans: loans.filter(l => l.status === 'active'),
+        error: req.query.error || null,
+        success: req.query.success || null
+    });
+});
+
+// --- STEP 5: admin approves a pending request -> creates the active loan ---
+app.post("/admin/loans/requests/:id/approve", requireAdmin, async (req, res) => {
+    const result = await loanModel.approveRequest(
+        req.params.id, req.session.user.id, req.body.remarks, req.body.start_date, req.body.due_date
+    );
+
+    // (Lin Htut Win) notification trigger — request approved
+    // Notify the student (not the admin) that their request was approved.
+    if (result.ok && result.student) {
+        await notifyUser({
+            userId: result.student.userId,
+            email: result.student.email,
+            name: result.student.name,
+            type: "request_approved",
+            message: `Good news! Your loan request for ${result.modelName} has been approved.`
+        });
+    }
+
+    if (result.ok && result.student) {
+        await auditModel.logAction(req.session.user.id, "approve",
+            `Approved a loan request — ${result.student.name} · ${result.modelName}`);
+    }
+
+    const msg = result.ok
+        ? "success=" + encodeURIComponent("Request approved, loan created.")
+        : "error=" + encodeURIComponent(result.error);
+
+    res.redirect("/admin/loans?" + msg);
+});
+
+// --- STEP 6: admin rejects a pending request ---
+app.post("/admin/loans/requests/:id/reject", requireAdmin, async (req, res) => {
+    const result = await loanModel.rejectRequest(req.params.id, req.session.user.id, req.body.remarks);
+
+    // (Lin Htut Win) notification trigger — request rejected
+    // Notify the student their request was rejected.
+    if (result.ok && result.student) {
+        await notifyUser({
+            userId: result.student.userId,
+            email: result.student.email,
+            name: result.student.name,
+            type: "request_rejected",
+            message: `Your loan request for ${result.modelName} has been rejected. Please contact the Resource Centre for details.`
+        });
+    }
+
+    if (result.ok && result.student) {
+        await auditModel.logAction(req.session.user.id, "reject",
+            `Rejected a loan request — ${result.student.name} · ${result.modelName}`);
+    }
+
+    const msg = result.ok
+        ? "success=" + encodeURIComponent("Request rejected.")
+        : "error=" + encodeURIComponent(result.error);
+
+    res.redirect("/admin/loans?" + msg);
+});
+
+// --- STEP 7: admin returns the laptop and sets its new status ---
+// The loan's owner (the student) is notified, not the admin doing the return.
+app.post("/admin/loans/:id/return", requireAdmin, async (req, res) => {
+    const { status, reason } = req.body;
+    const result = await loanModel.returnLoan(req.params.id, status, reason);
+
+    if (result.ok) {
+        // Confirm the return to the student who had the laptop...
+        await notifyUser({
+            userId: result.userId,
+            email: result.email,
+            name: result.name,
+            type: "loan_returned",
+            message: `Your loaned ${result.modelName} has been returned. Thank you!`
+        });
+
+        // ...and if it was late, tell them about the fine that was raised.
+        if (result.fine) {
+            await notifyUser({
+                userId: result.userId,
+                email: result.email,
+                name: result.name,
+                type: "fine_issued",
+                message: `A late-return fine of $${result.fine.amount} was issued for returning ${result.modelName} ${result.fine.daysLate} day(s) late.`
+            });
+        }
+
+        await auditModel.logAction(req.session.user.id, "return", `Processed a return — ${result.modelName}`);
+    }
+
+    const msg = result.ok
+        ? "success=" + encodeURIComponent(
+            result.status === "maintenance"
+                ? `Laptop returned and sent to maintenance.`
+                : `Laptop returned and marked available.`
+          )
+        : "error=" + encodeURIComponent(result.error);
+
+    res.redirect("/admin/loans?" + msg);
+});
+
 // ---------- Protected app routes ----------
 
 app.get("/home", requireLogin, async (req, res) => {
@@ -529,94 +731,6 @@ app.get('/admin/reports/laptops', requireAdmin, async (req, res) => {
     });
 });
 
-// =====================================================================
-//  LOAN SYSTEM  —  the whole flow, in the order it happens
-//
-//    STEP 1  Student sends a loan request     POST /loans/request
-//    STEP 2  Student checks their requests    GET  /loans
-//    STEP 3  Student cancels a request        POST /loans/request/:id/cancel
-//    STEP 4  Admin reviews everything         GET  /admin/loans
-//    STEP 5  Admin approves a request         POST /admin/loans/requests/:id/approve
-//    STEP 6  Admin rejects a request          POST /admin/loans/requests/:id/reject
-//    STEP 7  Admin returns the laptop         POST /admin/loans/:id/return
-//
-//  A request starts out "pending". Approving it (step 5) turns it into an
-//  active loan. Returning that loan (step 7) frees the laptop and lets the
-//  admin set its new status (available / maintenance).
-// =====================================================================
-
-// --- STEP 1: student sends a loan request (submitted from the Browse page) ---
-app.post("/loans/request", requireLogin, async (req, res) => {
-    const student = currentStudent(req);
-
-    if (student.role === "admin") {
-        return res.redirect("/browse?error=" + encodeURIComponent(
-            "Admins cannot submit loan requests."
-        ));
-    }
-
-    const { model_id, reason, remarks } = req.body;
-
-    const result = await loanModel.createLoanRequest(
-        req.session.user.id,
-        student.school,
-        model_id,
-        reason,
-        remarks
-    );
-
-    if (!result.ok) {
-        return res.redirect("/browse?error=" + encodeURIComponent(result.error));
-    }
-
-    // (Lin Htut Win) notification trigger — request submitted
-    // Notify the student their request is in (in-app bell + n8n email).
-    await notifyUser({
-        userId: req.session.user.id,
-        email: student.email,
-        name: student.name,
-        type: "request_submitted",
-        message: `Your loan request for ${result.modelName} has been submitted and is pending admin approval.`
-    });
-
-    return res.redirect("/loans?success=" + encodeURIComponent(
-        "Loan request submitted! You'll see it as Pending until an admin approves it."
-    ));
-});
-
-// --- STEP 2: student views their own requests + active loans ---
-// (Admins don't have personal loans, so send them to the admin page instead.)
-app.get("/loans", requireLogin, async (req, res) => {
-    if (req.session.user.role === "admin") return res.redirect("/admin/loans");
-
-    const userId = req.session.user.id;
-    const student = currentStudent(req);
-
-    const requests = await loanModel.getRequestsByUser(userId);
-    const loans = await loanModel.getLoansByUser(userId);
-
-    res.render("loans", {
-        title: "My Loans",
-        page: "loans",
-        student,
-        requests,
-        loans,
-        error: req.query.error || null,
-        success: req.query.success || null
-    });
-});
-
-// --- STEP 3: student cancels one of their still-pending requests ---
-app.post("/loans/request/:id/cancel", requireLogin, async (req, res) => {
-    const result = await loanModel.cancelRequest(req.session.user.id, req.params.id);
-
-    const msg = result.ok
-        ? "success=" + encodeURIComponent("Request cancelled.")
-        : "error=" + encodeURIComponent(result.error);
-
-    res.redirect("/loans?" + msg);
-});
-
 // >>> Implemented by: Lin Htut Win — PDF loan receipt (pdfkit) <<<
 // --- Download a PDF loan receipt (only the student's own loan) ---
 app.get("/loans/:id/receipt", requireLogin, async (req, res) => {
@@ -724,120 +838,6 @@ app.get("/loans/:id/receipt", requireLogin, async (req, res) => {
     doc.text("Authorised by: Resource Centre staff", rightX, lineY + 5, { width: lineLen });
 
     doc.end();
-});
-
-// --- STEP 4: admin sees every pending request + every active loan ---
-app.get('/admin/loans', requireAdmin, async (req, res) => {
-    const requests = await loanModel.getAllRequests();
-    const loans = await loanModel.getAllLoans();
-
-    res.render('admin/adminLoans', {
-        page: 'loans',
-        admin: req.session.user,
-        pendingRequests: requests.filter(r => r.status === 'pending'),
-        activeLoans: loans.filter(l => l.status === 'active'),
-        error: req.query.error || null,
-        success: req.query.success || null
-    });
-});
-
-// --- STEP 5: admin approves a pending request -> creates the active loan ---
-app.post("/admin/loans/requests/:id/approve", requireAdmin, async (req, res) => {
-    const result = await loanModel.approveRequest(
-        req.params.id, req.session.user.id, req.body.remarks, req.body.start_date, req.body.due_date
-    );
-
-    // (Lin Htut Win) notification trigger — request approved
-    // Notify the student (not the admin) that their request was approved.
-    if (result.ok && result.student) {
-        await notifyUser({
-            userId: result.student.userId,
-            email: result.student.email,
-            name: result.student.name,
-            type: "request_approved",
-            message: `Good news! Your loan request for ${result.modelName} has been approved.`
-        });
-    }
-
-    if (result.ok && result.student) {
-        await auditModel.logAction(req.session.user.id, "approve",
-            `Approved a loan request — ${result.student.name} · ${result.modelName}`);
-    }
-
-    const msg = result.ok
-        ? "success=" + encodeURIComponent("Request approved, loan created.")
-        : "error=" + encodeURIComponent(result.error);
-
-    res.redirect("/admin/loans?" + msg);
-});
-
-// --- STEP 6: admin rejects a pending request ---
-app.post("/admin/loans/requests/:id/reject", requireAdmin, async (req, res) => {
-    const result = await loanModel.rejectRequest(req.params.id, req.session.user.id, req.body.remarks);
-
-    // (Lin Htut Win) notification trigger — request rejected
-    // Notify the student their request was rejected.
-    if (result.ok && result.student) {
-        await notifyUser({
-            userId: result.student.userId,
-            email: result.student.email,
-            name: result.student.name,
-            type: "request_rejected",
-            message: `Your loan request for ${result.modelName} has been rejected. Please contact the Resource Centre for details.`
-        });
-    }
-
-    if (result.ok && result.student) {
-        await auditModel.logAction(req.session.user.id, "reject",
-            `Rejected a loan request — ${result.student.name} · ${result.modelName}`);
-    }
-
-    const msg = result.ok
-        ? "success=" + encodeURIComponent("Request rejected.")
-        : "error=" + encodeURIComponent(result.error);
-
-    res.redirect("/admin/loans?" + msg);
-});
-
-// --- STEP 7: admin returns the laptop and sets its new status ---
-// The loan's owner (the student) is notified, not the admin doing the return.
-app.post("/admin/loans/:id/return", requireAdmin, async (req, res) => {
-    const { status, reason } = req.body;
-    const result = await loanModel.returnLoan(req.params.id, status, reason);
-
-    if (result.ok) {
-        // Confirm the return to the student who had the laptop...
-        await notifyUser({
-            userId: result.userId,
-            email: result.email,
-            name: result.name,
-            type: "loan_returned",
-            message: `Your loaned ${result.modelName} has been returned. Thank you!`
-        });
-
-        // ...and if it was late, tell them about the fine that was raised.
-        if (result.fine) {
-            await notifyUser({
-                userId: result.userId,
-                email: result.email,
-                name: result.name,
-                type: "fine_issued",
-                message: `A late-return fine of $${result.fine.amount} was issued for returning ${result.modelName} ${result.fine.daysLate} day(s) late.`
-            });
-        }
-
-        await auditModel.logAction(req.session.user.id, "return", `Processed a return — ${result.modelName}`);
-    }
-
-    const msg = result.ok
-        ? "success=" + encodeURIComponent(
-            result.status === "maintenance"
-                ? `Laptop returned and sent to maintenance.`
-                : `Laptop returned and marked available.`
-          )
-        : "error=" + encodeURIComponent(result.error);
-
-    res.redirect("/admin/loans?" + msg);
 });
 
 // ========== Implemented by: Lin Htut Win — Notifications routes ==========
