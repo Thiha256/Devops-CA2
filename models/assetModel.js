@@ -13,12 +13,14 @@ async function getAssetsByModel(modelId) {
     return rows;
 }
 
-// New assets always start out available; maintenance/on loan only happen later.
-async function createAsset(modelId, asset_id, serial_no) {
+// Create a physical asset. Status defaults to 'available' but the admin can set
+// it on creation (e.g. straight to maintenance). maint_reason is only kept when
+// the status is 'maintenance', mirroring updateAsset.
+async function createAsset(modelId, asset_id, serial_no, status, maint_reason) {
     await db.execute(`
-        INSERT INTO laptop (model_id, asset_id, serial_no, status)
-        VALUES (?, ?, ?, 'available')`,
-        [modelId, asset_id, serial_no]
+        INSERT INTO laptop (model_id, asset_id, serial_no, status, maint_reason)
+        VALUES (?, ?, ?, ?, ?)`,
+        [modelId, asset_id, serial_no, status || 'available', status === 'maintenance' ? maint_reason : null]
     );
 }
 

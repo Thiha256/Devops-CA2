@@ -561,6 +561,34 @@ async function getReminderCandidates(dueSoonDays = 2) {
     });
 }
 
+// All the details needed to print one loan's receipt, gathered with a JOIN
+// across loan -> laptop -> laptop_model -> user (-> school). Scoped to user_id
+// so a student can only ever download a receipt for their OWN loan.
+async function getLoanForReceipt(loanId, userId) {
+    const [[row]] = await db.execute(`
+        SELECT
+            lo.loan_id,
+            lo.borrow_date,
+            lo.due_date,
+            lo.return_date,
+            l.asset_id,
+            l.serial_no,
+            CONCAT(lm.brand, ' ', lm.model_name) AS modelName,
+            CONCAT(lm.cpu, ', ', lm.ram, 'GB RAM, ', lm.storage, 'GB SSD') AS specs,
+            u.name AS studentName,
+            u.email AS studentEmail,
+            COALESCE(s.school_name, '-') AS schoolName
+        FROM loan lo
+        JOIN laptop l ON l.laptop_id = lo.laptop_id
+        JOIN laptop_model lm ON lm.model_id = l.model_id
+        JOIN user u ON u.user_id = lo.user_id
+        LEFT JOIN school s ON s.school_id = u.school_id
+        WHERE lo.loan_id = ? AND lo.user_id = ?
+    `, [loanId, userId]);
+
+    return row || null;
+}
+
 module.exports = {
     LOAN_REASONS,
     getAllModels,
@@ -574,5 +602,6 @@ module.exports = {
     approveRequest,
     rejectRequest,
     returnLoan,
-    getReminderCandidates
+    getReminderCandidates,
+    getLoanForReceipt
 };

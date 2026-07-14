@@ -23,7 +23,7 @@
             <span class="text-success fw-bold text-uppercase small">Admin Account</span>
             <h2 class="fw-bold my-2">Admin Profile</h2>
             <p class="text-muted mb-0">
-                View-only account information for the Resource Centre administrator.
+                Your account details and a log of your recent admin actions.
             </p>
         </section>
 
@@ -66,6 +66,66 @@
                 </div>
 
             </div>
+        </section>
+
+        <!-- Activity Log: every action this admin takes, from the audit_log table -->
+        <section class="bg-white border rounded-4 p-4 mb-4">
+            <%
+                function auditStyle(type) {
+                    switch (type) {
+                        case 'login':        return { icon: 'fa-right-to-bracket', colour: 'primary'   };
+                        case 'approve':      return { icon: 'fa-circle-check',      colour: 'success'   };
+                        case 'reject':       return { icon: 'fa-circle-xmark',      colour: 'danger'    };
+                        case 'return':       return { icon: 'fa-rotate-left',       colour: 'secondary' };
+                        case 'model_add':    return { icon: 'fa-plus',              colour: 'primary'   };
+                        case 'model_edit':   return { icon: 'fa-pen',               colour: 'warning'   };
+                        case 'model_delete': return { icon: 'fa-trash',             colour: 'danger'    };
+                        case 'asset_add':    return { icon: 'fa-plus',              colour: 'success'   };
+                        case 'asset_edit':   return { icon: 'fa-pen',               colour: 'warning'   };
+                        case 'asset_delete': return { icon: 'fa-trash',             colour: 'danger'    };
+                        default:             return { icon: 'fa-clock',             colour: 'secondary' };
+                    }
+                }
+                const chips = [
+                    { key: 'all',       label: 'All'       },
+                    { key: 'logins',    label: 'Logins'    },
+                    { key: 'decisions', label: 'Decisions' },
+                    { key: 'inventory', label: 'Inventory' }
+                ];
+            %>
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                <h5 class="fw-bold mb-0">
+                    <i class="fa-solid fa-clock-rotate-left me-2 text-primary"></i>Activity Log
+                </h5>
+                <div class="d-flex gap-2 flex-wrap">
+                    <% chips.forEach(function (ch) { %>
+                        <a href="/admin/profile<%= ch.key === 'all' ? '' : '?filter=' + ch.key %>"
+                           class="badge rounded-pill text-decoration-none <%= filter === ch.key ? 'bg-primary text-white' : 'bg-light text-secondary border' %>"
+                           style="padding:6px 14px; font-size:12px;">
+                            <%= ch.label %>
+                        </a>
+                    <% }); %>
+                </div>
+            </div>
+
+            <% if (activity.length === 0) { %>
+                <p class="text-muted text-center py-4 mb-0">No activity recorded yet.</p>
+            <% } else { %>
+                <ul class="list-unstyled mb-0">
+                    <% activity.forEach(function (a) {
+                        const s = auditStyle(a.action_type); %>
+                        <li class="d-flex align-items-center gap-3 border-bottom py-3">
+                            <div class="rounded-circle bg-<%= s.colour %> bg-opacity-10 text-<%= s.colour %> d-flex align-items-center justify-content-center flex-shrink-0" style="width:40px; height:40px;">
+                                <i class="fa-solid <%= s.icon %>"></i>
+                            </div>
+                            <div class="flex-grow-1"><%= a.description %></div>
+                            <small class="text-muted text-nowrap">
+                                <%= new Date(a.created_at).toLocaleString('en-SG', { day:'numeric', month:'short', hour:'numeric', minute:'2-digit' }) %>
+                            </small>
+                        </li>
+                    <% }); %>
+                </ul>
+            <% } %>
         </section>
 
         <section class="bg-white border rounded-4 p-4">

@@ -54,7 +54,7 @@
                     </select>
                 </div>
 
-                <div class="col-12">
+                <div class="col-12" id="maintReasonField" style="<%= status === 'maintenance' ? '' : 'display:none;' %>">
                     <label class="form-label fw-semibold small">Maintenance Reason</label>
                     <textarea name="maint_reason" class="form-control" rows="2"><%= maint_reason || '' %></textarea>
                 </div>
@@ -70,5 +70,17 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // Only show the Maintenance Reason field when Status is "maintenance".
+    (function () {
+        const statusEl = document.querySelector('select[name="status"]');
+        const reasonField = document.getElementById('maintReasonField');
+        function toggle() {
+            reasonField.style.display = statusEl.value === 'maintenance' ? '' : 'none';
+        }
+        statusEl.addEventListener('change', toggle);
+        toggle();
+    })();
+</script>
 </body>
 </html>
