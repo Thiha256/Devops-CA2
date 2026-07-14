@@ -123,20 +123,26 @@ function currentStudent(req) {
     };
 }
 
-// Redirect to welcome if not logged in; redirect to /home if logged in but wrong role.
+
 function requireRole(role) {
     return function (req, res, next) {
+        // if the user session doesnt exist (not logged in) then go back to the welcome page
         if (!req.session.user) return res.redirect("/welcome");
-        // role is only truthy for requireAdmin (e.g. "admin"), so this only fires when
-        // a specific role was required AND the logged-in user's role doesn't match it.
+        // if a student tries to go to an admin page route
+        // their role would not match which would make this statement true
+        // they are then redirected to the home page
+        // but, if requirelogin() was called, role is undefined
+        // so this part is skipped entirely, and student pages
+        // can just render normally afterwards
         if (role && req.session.user.role !== role) return res.redirect("/home");
         next();
     };
 }
 
-// role is omitted here, so it's undefined inside requireRole -> the role check is skipped
-// and this just enforces "logged in", regardless of role.
+// this is the login function for students
+// role is omitted here, so it's undefined inside requireRole, so the role check is skipped
 const requireLogin = requireRole();
+// login function for admins
 const requireAdmin = requireRole("admin");
 
 // ---------- Public / auth routes ----------
@@ -459,10 +465,10 @@ app.get('/admin', requireAdmin, async (req, res) => {
     const allModels = await getModelsWithStats();
     const filteredModels = q
         ? allModels.filter(model => model.name.toLowerCase().includes(q.toLowerCase()))
-        : allModels;
+        : allModels; // if query is an empty string (eval to false) return all models
 
     res.render('admin/adminPage', {
-        page: 'inventory',
+        page: 'inventory', // used by adminSidebar.ejs to highlight the active link
         admin: req.session.user,
         models: filteredModels,
         query: q,
@@ -499,6 +505,9 @@ app.post('/admin/inventory/:id/delete', requireAdmin, async (req, res) => {
 
 // Serve add model form.
 app.get('/admin/inventory/new', requireAdmin, (req, res) => {
+    // empty object so model.brand etc. resolve to undefined (blank fields) instead of
+    // throwing on a null, its  purpos is so when the admin edits an an error is thrown
+    // the admin doesnt have to refill the fields again
     res.render('admin/addModelForm', {
         page: 'inventory',
         admin: req.session.user,
@@ -516,6 +525,7 @@ app.post('/admin/inventory/new', requireAdmin, async (req, res) => {
         res.redirect('/admin');
     } catch (err) {
         console.error('Create model error:', err.message);
+        // rerender with what the admin actually typed so a failed save doesn't wipe the form
         res.render('admin/addModelForm', {
             page: 'inventory',
             admin: req.session.user,
@@ -566,12 +576,12 @@ app.post('/admin/inventory/:id/edit', requireAdmin, async (req, res) => {
     }
 });
 
-// Per-model asset manager: lists every physical laptop unit for one model,
+// Model asset manager which lists every physical laptop unit for one model,
 // with optional serial/asset id search and status filter.
 app.get('/admin/inventory/:id', requireAdmin, async (req, res) => {
     const model = await getModelStatsById(req.params.id);
-    // Go back to the inventory list with an error instead of rendering this
-    // page against an undefined model (eg. bad :id in the URL).
+    // Go back to the inventory list with an error if the model does not exist
+    //  (eg. bad :id in the URL).
     if (!model) {
         const allModels = await getModelsWithStats();
         return res.render('admin/adminPage', {
@@ -583,15 +593,19 @@ app.get('/admin/inventory/:id', requireAdmin, async (req, res) => {
         });
     }
 
-    const query = req.query.q || "";
-    const status = req.query.status || "";
+    const query = req.query.q || ""; // default to "" so missing param isn't undefined
+    const status = req.query.status || ""; // same default as above for the status filter
     const q = query.toLowerCase();
 
     const allAssets = await getAssetsByModel(req.params.id);
     const assets = allAssets.filter(asset => {
+        // !query is true when no search text was typed, so every asset counts as a
+        // match. otherwise only assets whose id/serial actually contains the text match
         const matchesQuery = !query ||
             asset.asset_id.toLowerCase().includes(q) ||
             asset.serial_no.toLowerCase().includes(q);
+        // same idea: !status true means no status filter picked, so everything passes.
+        // otherwise the asset's status has to equal the one selected
         const matchesStatus = !status || asset.status === status;
         return matchesQuery && matchesStatus;
     });
@@ -621,6 +635,7 @@ app.post('/admin/inventory/:id/assets/:laptopId/delete', requireAdmin, async (re
 // Add asset form for a specific model
 app.get('/admin/inventory/:id/assets/new', requireAdmin, async (req, res) => {
     const model = await getModelStatsById(req.params.id);
+    // if model doesnt exist go back to inv and render an error
     if (!model) {
         const allModels = await getModelsWithStats();
         return res.render('admin/adminPage', {
@@ -632,6 +647,7 @@ app.get('/admin/inventory/:id/assets/new', requireAdmin, async (req, res) => {
         });
     }
 
+    // if model does exist, render the add asset form
     res.render('admin/addAssetForm', {
         page: 'inventory',
         admin: req.session.user,
@@ -658,6 +674,7 @@ app.post('/admin/inventory/:id/assets/new', requireAdmin, async (req, res) => {
         }
 
         const model = await getModelStatsById(req.params.id);
+        // pass back what the admin typed so the re-rendered form isn't wiped blank
         res.render('admin/addAssetForm', {
             page: 'inventory',
             admin: req.session.user,
@@ -674,6 +691,8 @@ app.post('/admin/inventory/:id/assets/new', requireAdmin, async (req, res) => {
 // Serve edit asset form, pre-filled with that one asset's current details.
 app.get('/admin/inventory/:id/assets/:laptopId/edit', requireAdmin, async (req, res) => {
     const model = await getModelStatsById(req.params.id);
+    // model can exist but the asset itself may not (deleted, or laptopId belongs
+    // to a different model) - that's why asset needs its own check, not just model's
     const asset = model ? await getAssetById(req.params.laptopId) : null;
 
     if (!model || !asset) {
@@ -683,6 +702,8 @@ app.get('/admin/inventory/:id/assets/:laptopId/edit', requireAdmin, async (req, 
             admin: req.session.user,
             models: allModels,
             query: '',
+            // this only runs when !model || !asset was true, so if model is falsy that's
+            // the actual cause, otherwise model was fine and asset must be the one missing
             error: !model ? 'That model could not be found.' : 'That asset could not be found.'
         });
     }
@@ -692,6 +713,8 @@ app.get('/admin/inventory/:id/assets/:laptopId/edit', requireAdmin, async (req, 
         admin: req.session.user,
         model,
         laptopId: asset.laptop_id,
+        // remove the "LAP" prefix and leading zeros, e.g. "LAP007" -> "7", undoing the
+        // padStart above, || '0' covers asset number 0, where the regex removes every digit
         asset_number: asset.asset_id.replace(/^LAP0*/, '') || '0',
         serial_no: asset.serial_no,
         status: asset.status,
@@ -703,11 +726,15 @@ app.get('/admin/inventory/:id/assets/:laptopId/edit', requireAdmin, async (req, 
 // Process edit asset form
 app.post('/admin/inventory/:id/assets/:laptopId/edit', requireAdmin, async (req, res) => {
     const { asset_number, serial_no, status, maint_reason } = req.body;
+    // pad the typed number to 3 digits so "7" becomes "LAP007", matching the
+    // asset_id format stored in the DB 
     const asset_id = 'LAP' + asset_number.padStart(3, '0');
     try {
         await updateAsset(req.params.laptopId, asset_id, serial_no, status, maint_reason);
         res.redirect('/admin/inventory/' + req.params.id);
     } catch (err) {
+        // DB enforces asset_id/serial_no uniqueness, ER_DUP_ENTRY means the edited
+        // values collide with an existing asset, anything else is an unexpected failure
         const isDuplicate = err.code === 'ER_DUP_ENTRY';
         if (!isDuplicate) {
             console.error('Update asset error:', err.message);
