@@ -493,6 +493,18 @@ app.get('/admin/reports', requireAdmin, async (req, res) => {
     });
 });
 
+app.get('/admin/reports/laptops', requireAdmin, async (req, res) => {
+    const allowed = ['available', 'on loan', 'maintenance'];
+    const status = allowed.includes(req.query.status) ? req.query.status : null;
+
+    res.render('admin/reportLaptops', {
+        page: 'reports',
+        admin: req.session.user,
+        laptops: await reportModel.getLaptopsByStatus(status),
+        status
+    });
+});
+
 // =====================================================================
 //  LOAN SYSTEM  —  the whole flow, in the order it happens
 //

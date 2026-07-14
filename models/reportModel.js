@@ -147,10 +147,52 @@ async function getLoansBySchool() {
     }));
 }
 
+async function getLaptopsByStatus(status) {
+    const params = [];
+    let where = "";
+
+    if (status) {
+        where = "WHERE l.status = ?";
+        params.push(status);
+    }
+
+    const [rows] = await db.execute(`
+        SELECT
+            l.laptop_id,
+            l.asset_id,
+            l.serial_no,
+            l.status,
+            CONCAT(lm.brand, ' ', lm.model_name) AS modelName,
+            u.name AS borrowerName,
+            lo.due_date
+        FROM laptop l
+        JOIN laptop_model lm ON lm.model_id = l.model_id
+        LEFT JOIN loan lo ON lo.laptop_id = l.laptop_id AND lo.return_date IS NULL
+        LEFT JOIN user u ON u.user_id = lo.user_id
+        ${where}
+        ORDER BY lm.brand, lm.model_name, l.asset_id
+    `, params);
+
+    const now = new Date();
+    return rows.map(l => {
+        const daysRemaining = l.due_date
+            ? Math.ceil((new Date(l.due_date) - now) / (1000 * 60 * 60 * 24))
+            : null;
+
+        return {
+            ...l,
+            borrowerName: l.borrowerName || "-",
+            dueLabel: formatDate(l.due_date),
+            overdue: l.due_date ? daysRemaining < 0 : false
+        };
+    });
+}
+
 module.exports = {
     getSummaryStats,
     getMostRequestedModels,
     getRecentReviews,
     getOverdueLoans,
-    getLoansBySchool
+    getLoansBySchool,
+    getLaptopsByStatus
 };
