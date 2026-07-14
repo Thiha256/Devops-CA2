@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
     <link rel="stylesheet" href="/css/style.css">
 </head>
-<body class="bg-light">
+<body class="rp-app-bg">
 
 <%- include("partials/adminNavbar") %>
 
@@ -18,10 +18,7 @@
     
     <!-- Delete Error -->
     <% if (typeof error !== 'undefined' && error) { %>
-        <div class="alert alert-danger d-flex align-items-center gap-2" role="alert">
-            <i class="fa-solid fa-triangle-exclamation"></i>
-            <span><%= error %></span>
-        </div>
+        <div data-flash="danger" data-flash-message="<%= error %>" class="d-none"></div>
     <% } %>
 
     <!-- HEADER & GLOBAL CONTROLS -->
@@ -79,7 +76,10 @@
                                 <li><a class="dropdown-item" href="/admin/inventory/<%= model.id %>/edit"><i class="fa-solid fa-pen me-2 text-secondary"></i>Edit Model</a></li>
                                 <li>
                                     <form action="/admin/inventory/<%= model.id %>/delete" method="POST"
-                                          onsubmit="return confirm('Delete <%= model.name %>? This cannot be undone.');">
+                                          class="rp-confirm-form"
+                                          data-confirm-title="Delete this model?"
+                                          data-confirm-message="Delete <%= model.name %>? This cannot be undone."
+                                          data-confirm-label="Delete">
                                         <button type="submit" class="dropdown-item text-danger border-0 bg-transparent w-100 text-start">
                                             <i class="fa-solid fa-trash me-2"></i>Delete Model
                                         </button>
@@ -121,6 +121,8 @@
 
 </main>
 </div>
+
+<%- include("partials/adminFooter") %>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>

@@ -1,4 +1,4 @@
-<nav class="navbar navbar-expand bg-white border-bottom sticky-top py-2 px-4">
+<nav class="navbar navbar-expand bg-white border-bottom sticky-top py-2 px-4 admin-navbar">
     <div class="d-flex align-items-center gap-3">
         <img src="/images/rp-logo.png" alt="Republic Polytechnic Logo" style="height:42px;">
         <div>
@@ -8,14 +8,20 @@
     </div>
 
     <div class="ms-auto d-flex align-items-center gap-3">
-        <a href="/admin/profile" class="d-flex align-items-center gap-2 text-decoration-none text-dark" title="Admin Profile">
+        <button class="btn btn-light btn-sm rounded-circle border" style="width:38px;height:38px;">
+            <i class="fa-regular fa-bell"></i>
+        </button>
+        <div class="d-flex align-items-center gap-2">
             <div class="rounded-circle bg-success bg-opacity-10 text-success d-flex align-items-center justify-content-center" style="width:38px;height:38px;">
                 <i class="fa-solid fa-user-shield"></i>
             </div>
             <div>
                 <div class="fw-semibold small"><%= admin.name %></div>
+                <div class="text-muted" style="font-size:11px;"><%= admin.id %></div>
             </div>
-        </a>
+        </div>
         <a href="/logout" class="btn btn-outline-primary btn-sm rounded-pill px-3">Logout</a>
     </div>
 </nav>
+
+<script src="/js/rp-ui.js"></script>

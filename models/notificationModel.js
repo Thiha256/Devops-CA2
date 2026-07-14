@@ -1,6 +1,3 @@
-// =====================================================================
-// Devops-CA2 — Notification model — Implemented by: Lin Htut Win
-// =====================================================================
 const db = require("../database");
 
 // Insert a new in-app notification for one user. Returns the new row's id.
@@ -61,26 +58,10 @@ async function markAllRead(userId) {
     );
 }
 
-// Delete one notification. The user_id is checked too, so a user can only ever
-// delete their own notifications (they can't guess another user's id and remove it).
-async function deleteNotification(notificationId, userId) {
-    await db.execute(
-        `DELETE FROM notification WHERE notification_id = ? AND user_id = ?`,
-        [notificationId, userId]
-    );
-}
-
-// Delete every notification belonging to one user ("Clear all").
-async function deleteAllByUser(userId) {
-    await db.execute(`DELETE FROM notification WHERE user_id = ?`, [userId]);
-}
-
 module.exports = {
     createNotification,
     createNotificationOnce,
     getRecentByUser,
     getUnreadCount,
-    markAllRead,
-    deleteNotification,
-    deleteAllByUser
+    markAllRead
 };

@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
     <link rel="stylesheet" href="/css/style.css">
 </head>
-<body class="bg-light">
+<body class="rp-app-bg">
 
 <%- include("partials/navbar") %>
 
@@ -18,39 +18,37 @@
     <main class="flex-grow-1">
 
         <!-- Hero -->
-        <section class="bg-white border rounded-4 p-4 mb-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <section class="rp-hero-banner rp-hero-photo rp-hero-dash border rounded-4 p-4 mb-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
             <div>
-                <span class="text-success fw-bold text-uppercase small">RP Resource Centre</span>
-                <h2 class="fw-bold my-2">Welcome back, <%= student.name %> 👋</h2>
-                <p class="text-muted mb-0" style="max-width:560px;">Manage your bookings, active loans and overdue penalties from one place.</p>
+                <span class="rp-hero-eyebrow fw-bold text-uppercase small">RP Resource Centre</span>
+                <%
+                    const hour = new Date().getHours();
+                    const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+                %>
+                <h2 class="fw-bold my-2"><%= greeting %>, <%= student.name %> 👋</h2>
+                <p class="mb-0" style="max-width:560px;">Manage your bookings and active loans from one place.</p>
             </div>
             <a href="/browse" class="btn btn-primary rounded-3 px-4 py-2">Browse Devices</a>
         </section>
 
         <!-- Stats -->
         <section class="row g-3 mb-4">
-            <div class="col-6 col-lg-3">
-                <div class="bg-white border rounded-4 p-3 border-start border-success border-4">
+            <div class="col-6 col-lg-4">
+                <div class="rp-stat-fill rounded-4 p-3">
                     <h3 class="fw-bold mb-1"><%= stats.available %></h3>
-                    <p class="text-muted small mb-0">Available Devices</p>
+                    <p class="small mb-0">Available Devices</p>
                 </div>
             </div>
-            <div class="col-6 col-lg-3">
-                <div class="bg-white border rounded-4 p-3 border-start border-success border-4">
+            <div class="col-6 col-lg-4">
+                <div class="rp-stat-fill rounded-4 p-3">
                     <h3 class="fw-bold mb-1"><%= stats.loans %></h3>
-                    <p class="text-muted small mb-0">Current Loans</p>
+                    <p class="small mb-0">Current Loans</p>
                 </div>
             </div>
-            <div class="col-6 col-lg-3">
-                <div class="bg-white border rounded-4 p-3 border-start border-success border-4">
-                    <h3 class="fw-bold mb-1"><%= stats.penalties %></h3>
-                    <p class="text-muted small mb-0">Outstanding Penalties</p>
-                </div>
-            </div>
-            <div class="col-6 col-lg-3">
-                <div class="bg-white border rounded-4 p-3 stat-gold">
-                    <h3 class="fw-bold mb-1"><%= loan.daysRemaining %></h3>
-                    <p class="text-muted small mb-0">Days Remaining</p>
+            <div class="col-6 col-lg-4">
+                <div class="rp-stat-fill rp-stat-gold rounded-4 p-3">
+                    <h3 class="fw-bold mb-1"><%= loan ? loan.daysRemaining : "-" %></h3>
+                    <p class="small mb-0">Days Remaining</p>
                 </div>
             </div>
         </section>
@@ -62,13 +60,35 @@
                     <div class="bg-primary bg-opacity-10 text-success rounded-4 d-inline-flex align-items-center justify-content-center mb-3" style="width:130px;height:130px;font-size:60px;">
                         <i class="fa-solid fa-laptop"></i>
                     </div>
-                    <span class="badge bg-success rounded-pill px-3 py-2 mb-3"><%= loan.status %></span>
-                    <h4 class="fw-bold mb-3"><%= loan.device %></h4>
-                    <p class="text-muted small mb-1">Due Date</p>
-                    <h6 class="fw-bold mb-4"><%= loan.dueDate %></h6>
-                    <a href="/loans" class="btn btn-primary rounded-3 px-4 mt-auto">View Loan Details</a>
+                    <% if (loan) { %>
+                        <span class="badge <%= loan.overdue ? 'bg-danger' : 'bg-success' %> rounded-pill px-3 py-2 mb-3">
+                            <%= loan.overdue ? "Overdue" : "On Loan" %>
+                        </span>
+                        <h4 class="fw-bold mb-3"><%= loan.modelName %></h4>
+
+                        <% const pct = loan.overdue ? 100 : loan.percentElapsed; %>
+                        <% const barClass = loan.overdue ? "bg-danger" : (pct >= 80 ? "bg-warning" : "bg-success"); %>
+                        <div class="w-100 mb-1">
+                            <div class="progress rounded-pill" style="height:8px;">
+                                <div class="progress-bar <%= barClass %>" role="progressbar" style="width:<%= pct %>%;"></div>
+                            </div>
+                        </div>
+                        <p class="text-muted small mb-3">
+                            <%= loan.borrowLabel %> → <%= loan.dueLabel %>
+                        </p>
+
+                        <p class="text-muted small mb-1">Due Date</p>
+                        <h6 class="fw-bold mb-4"><%= loan.dueLabel %></h6>
+                        <a href="/loans" class="btn btn-primary rounded-3 px-4 mt-auto">View Loan Details</a>
+                    <% } else { %>
+                        <span class="badge bg-secondary rounded-pill px-3 py-2 mb-3">No Active Loan</span>
+                        <h4 class="fw-bold mb-3">Nothing on loan</h4>
+                        <p class="text-muted small mb-4">Browse available devices to submit a loan request.</p>
+                        <a href="/browse" class="btn btn-primary rounded-3 px-4 mt-auto">Browse Devices</a>
+                    <% } %>
                 </div>
             </div>
+
 
             <div class="col-lg-8">
                 <div class="bg-white border rounded-4 p-4 h-100">
@@ -111,13 +131,14 @@
             <h4 class="fw-bold mb-3">Latest Notices</h4>
             <ul class="list-unstyled mb-0">
                 <li class="mb-2 text-secondary">📢 Resource Centre Operating Hours: Monday - Friday (8:30AM - 6:00PM)</li>
-                <li class="mb-2 text-secondary">💻 New Lenovo ThinkPads are available for booking.</li>
-                <li class="mb-0 text-secondary">⚠ Return devices on time to avoid overdue penalties.</li>
+                <li class="mb-0 text-secondary">💻 New Lenovo ThinkPads are available for booking.</li>
             </ul>
         </section>
 
     </main>
 </div>
+
+<%- include("partials/footer") %>
 
 </body>
 </html>

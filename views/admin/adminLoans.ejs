@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
     <link rel="stylesheet" href="/css/style.css">
 </head>
-<body class="bg-light">
+<body class="rp-app-bg">
 
 <%- include("partials/adminNavbar") %>
 
@@ -17,14 +17,10 @@
     <main class="container py-4">
 
         <% if (error) { %>
-            <div class="alert alert-danger d-flex align-items-center gap-2 rounded-4" role="alert">
-                <i class="fa-solid fa-triangle-exclamation"></i><span><%= error %></span>
-            </div>
+            <div data-flash="danger" data-flash-message="<%= error %>" class="d-none"></div>
         <% } %>
         <% if (success) { %>
-            <div class="alert alert-success d-flex align-items-center gap-2 rounded-4" role="alert">
-                <i class="fa-solid fa-circle-check"></i><span><%= success %></span>
-            </div>
+            <div data-flash="success" data-flash-message="<%= success %>" class="d-none"></div>
         <% } %>
 
         <header class="bg-white border rounded-4 p-4 mb-4">
@@ -144,6 +140,8 @@
 
     </main>
 </div>
+
+<%- include("partials/adminFooter") %>
 
 <!-- Return laptop modal: admin sets the resulting status + reason -->
 <div class="modal fade" id="returnModal" tabindex="-1" aria-hidden="true">

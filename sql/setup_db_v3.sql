@@ -207,27 +207,6 @@ CREATE TABLE IF NOT EXISTS `resource_centre_db`.`notification` (
 ENGINE = InnoDB;
 
 
--- -----------------------------------------------------
--- Table `resource_centre_db`.`audit_log`
--- Records every admin action (logins, decisions, inventory changes) for the
--- activity log on the admin profile.
--- -----------------------------------------------------
-CREATE TABLE IF NOT EXISTS `resource_centre_db`.`audit_log` (
-  `log_id` INT NOT NULL AUTO_INCREMENT,
-  `user_id` INT NOT NULL,
-  `action_type` VARCHAR(30) NOT NULL,   -- login, approve, reject, return, model_add, asset_delete, ...
-  `description` VARCHAR(255) NOT NULL,
-  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`log_id`),
-  INDEX `fk_audit_user_idx` (`user_id` ASC) VISIBLE,
-  CONSTRAINT `fk_audit_user`
-    FOREIGN KEY (`user_id`)
-    REFERENCES `resource_centre_db`.`user` (`user_id`)
-    ON DELETE NO ACTION
-    ON UPDATE NO ACTION)
-ENGINE = InnoDB;
-
-
 SET SQL_MODE=@OLD_SQL_MODE;
 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS;
 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS;

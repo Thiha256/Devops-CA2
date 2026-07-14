@@ -10,26 +10,32 @@
    --rp-ink          near-black for headings & strong text
    ============================================================ */
 :root {
-    --rp-green: #00953B;
-    --rp-green-dark: #007530;
-    --rp-green-bright: #16c256;
-    --rp-ink: #10231a;
-    --rp-green-soft: #eef8f1;
+    --rp-green: #80ba27;
+    --rp-green-dark: #5e8a1c;
+    --rp-green-bright: #9bd14a;
+    --rp-ink: #1a1a17;
+    --rp-green-soft: #eef8e6;
 
     /* Gold accent — used sparingly for eye-catching highlights */
     --rp-gold: #f4b400;
     --rp-gold-dark: #cc9600;
     --rp-gold-soft: #fff6e0;
 
+    /* Black shield accent (from the RP logo) — used to visually separate
+       the Admin Portal from the student side, echoing the logo's shield. */
+    --rp-black: #1a1a18;
+    --rp-black-soft: #2b2b27;
+    --rp-black-border: rgba(255, 255, 255, 0.08);
+
     /* Retheme Bootstrap so `primary` == RP green (unifies buttons,
        sidebar, links, borders that previously rendered blue). */
-    --bs-primary: #00953B;
-    --bs-primary-rgb: 0, 149, 59;
-    --bs-success: #00953B;
-    --bs-success-rgb: 0, 149, 59;
-    --bs-link-color: #00953B;
-    --bs-link-color-rgb: 0, 149, 59;
-    --bs-link-hover-color: #007530;
+    --bs-primary: #80ba27;
+    --bs-primary-rgb: 128, 186, 39;
+    --bs-success: #80ba27;
+    --bs-success-rgb: 128, 186, 39;
+    --bs-link-color: #80ba27;
+    --bs-link-color-rgb: 128, 186, 39;
+    --bs-link-hover-color: #5e8a1c;
     --bs-body-color: #23302a;
     --bs-body-color-rgb: 35, 48, 42;
 }
@@ -77,14 +83,14 @@ h1, h2, h3, h4, h5, h6, .fw-bold {
     --bs-btn-active-border-color: var(--rp-green-dark);
     --bs-btn-disabled-bg: var(--rp-green);
     --bs-btn-disabled-border-color: var(--rp-green);
-    box-shadow: 0 8px 18px rgba(0, 149, 59, 0.18);
+    box-shadow: 0 8px 18px rgba(128, 186, 39, 0.18);
     transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .btn-primary:hover,
 .btn-success:hover {
     transform: translateY(-1px);
-    box-shadow: 0 10px 22px rgba(0, 149, 59, 0.28);
+    box-shadow: 0 10px 22px rgba(128, 186, 39, 0.28);
 }
 
 .btn-outline-primary,
@@ -117,7 +123,7 @@ aside a:hover {
 aside a.bg-primary {
     background: linear-gradient(135deg, var(--rp-green) 0%, var(--rp-green-bright) 100%) !important;
     color: #fff !important;
-    box-shadow: 0 6px 16px rgba(0, 149, 59, 0.30);
+    box-shadow: 0 6px 16px rgba(128, 186, 39, 0.30);
 }
 
 aside a.bg-primary:hover {
@@ -143,7 +149,16 @@ main a.d-block:hover {
 /* Focus ring in brand green */
 .form-control:focus {
     border-color: var(--rp-green);
-    box-shadow: 0 0 0 0.2rem rgba(0, 149, 59, 0.18);
+    box-shadow: 0 0 0 0.2rem rgba(128, 186, 39, 0.18);
+}
+
+/* ---------- Shared app background ---------- */
+/* Same soft mint gradient as the login/welcome pages, applied to
+   every logged-in page so the whole site reads as one consistent
+   theme instead of login/welcome being green and the rest grey. */
+.rp-app-bg {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #f4fff7 0%, #eaf7ed 100%);
 }
 
 /* ---------- Login page ---------- */
@@ -174,7 +189,7 @@ main a.d-block:hover {
     height: 64px;
     border-radius: 18px;
     background: linear-gradient(135deg, var(--rp-green) 0%, var(--rp-green-bright) 100%);
-    box-shadow: 0 10px 24px rgba(0, 149, 59, 0.28);
+    box-shadow: 0 10px 24px rgba(128, 186, 39, 0.28);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -227,7 +242,7 @@ main a.d-block:hover {
 }
 
 .welcome-actions .modern-btn {
-    box-shadow: 0 10px 24px rgba(0, 149, 59, 0.15);
+    box-shadow: 0 10px 24px rgba(128, 186, 39, 0.15);
 }
 
 .welcome-actions .btn:hover {
@@ -245,7 +260,7 @@ main a.d-block:hover {
 
 .feature-box:hover {
     transform: translateY(-3px);
-    box-shadow: 0 12px 28px rgba(0, 149, 59, 0.12);
+    box-shadow: 0 12px 28px rgba(128, 186, 39, 0.12);
 }
 
 .feature-icon {
@@ -259,4 +274,305 @@ main a.d-block:hover {
     color: var(--rp-green);
     font-size: 20px;
     margin-bottom: 10px;
+}
+
+/* ============================================================
+   Admin Portal — black shield accent
+   ------------------------------------------------------------
+   The RP logo pairs a black shield with a green flag. We reuse
+   that contrast to separate the Admin Portal from the student
+   side at a glance: dark navbar underline + dark sidebar, with
+   the same brand green used for active/highlighted states.
+   Scoped to .admin-navbar / .admin-sidebar only — student pages
+   (navbar.ejs / sidebar.ejs) are untouched.
+   ============================================================ */
+
+.navbar.admin-navbar {
+    border-bottom: 3px solid var(--rp-black) !important;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+
+aside.admin-sidebar {
+    background: var(--rp-black) !important;
+    border-color: var(--rp-black) !important;
+}
+
+aside.admin-sidebar p.text-muted {
+    color: #9aa39c !important;
+}
+
+aside.admin-sidebar a.text-primary {
+    color: #d9ddd7 !important;
+}
+
+aside.admin-sidebar a:hover {
+    background-color: var(--rp-black-soft) !important;
+    color: var(--rp-green-bright) !important;
+}
+
+/* Active admin sidebar item: brand green against the black shield */
+aside.admin-sidebar a.bg-primary {
+    background: linear-gradient(135deg, var(--rp-green) 0%, var(--rp-green-bright) 100%) !important;
+    color: #fff !important;
+    box-shadow: 0 6px 16px rgba(128, 186, 39, 0.35);
+}
+
+aside.admin-sidebar a.bg-primary:hover {
+    color: #fff !important;
+}
+
+aside.admin-sidebar .bg-light {
+    background: var(--rp-black-soft) !important;
+    border-color: var(--rp-black-border) !important;
+}
+
+aside.admin-sidebar .bg-light .text-muted {
+    color: #b7bdb4 !important;
+}
+
+aside.admin-sidebar .bg-light h6.text-success {
+    color: var(--rp-green-bright) !important;
+}
+
+/* ============================================================
+   Toasts — replace full-page alert banners with a small,
+   auto-dismissing notification (top-right), branded to match.
+   ============================================================ */
+.rp-toast {
+    min-width: 280px;
+    border-radius: 14px !important;
+    box-shadow: 0 12px 30px rgba(16, 35, 26, 0.18);
+    color: #fff;
+}
+
+.rp-toast .btn-close {
+    opacity: 0.85;
+}
+
+.rp-toast-success {
+    background: linear-gradient(135deg, var(--rp-green) 0%, var(--rp-green-dark) 100%);
+}
+
+.rp-toast-danger {
+    background: linear-gradient(135deg, #e0473f 0%, #b8342d 100%);
+}
+
+/* ============================================================
+   Confirm modal — replaces window.confirm() popups.
+   ============================================================ */
+.rp-confirm-modal {
+    box-shadow: 0 24px 60px rgba(16, 35, 26, 0.22);
+}
+
+.rp-confirm-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    margin: 0 auto;
+}
+
+.rp-confirm-icon-danger {
+    background: #fdecea;
+    color: #dc3545;
+}
+
+.rp-confirm-icon-neutral {
+    background: var(--rp-green-soft);
+    color: var(--rp-green);
+}
+
+/* ============================================================
+   Browse Devices — filter chips + device card hover polish
+   ============================================================ */
+.rp-chip {
+    background: #fff;
+    border: 1px solid #dfe6e0;
+    color: #4a564f;
+    font-weight: 600;
+    padding: 6px 16px;
+    transition: all 0.15s ease;
+}
+
+.rp-chip:hover {
+    border-color: var(--rp-green);
+    color: var(--rp-green-dark);
+}
+
+.rp-chip.active {
+    background: var(--rp-green);
+    border-color: var(--rp-green);
+    color: #fff;
+}
+
+.rp-device-card {
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.rp-device-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 14px 30px rgba(16, 35, 26, 0.12);
+    border-color: var(--rp-green) !important;
+}
+
+/* ============================================================
+   Page hero band — a bold filled banner instead of a plain
+   white bordered box, used at the top of every main page.
+   ============================================================ */
+.rp-hero-banner {
+    background: linear-gradient(120deg, var(--rp-green) 0%, var(--rp-green-dark) 100%);
+    border: none !important;
+    color: #fff;
+    position: relative;
+    overflow: hidden;
+}
+
+.rp-hero-banner::after {
+    content: "";
+    position: absolute;
+    top: -60px;
+    right: -60px;
+    width: 220px;
+    height: 220px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.rp-hero-banner::before {
+    content: "";
+    position: absolute;
+    bottom: -80px;
+    right: 120px;
+    width: 160px;
+    height: 160px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.rp-hero-banner .rp-hero-eyebrow {
+    color: rgba(255, 255, 255, 0.85) !important;
+}
+
+.rp-hero-banner h2,
+.rp-hero-banner h5 {
+    color: #fff !important;
+}
+
+.rp-hero-banner p {
+    color: rgba(255, 255, 255, 0.85) !important;
+}
+
+.rp-hero-banner .btn-primary {
+    background: #fff;
+    border-color: #fff;
+    color: var(--rp-green-dark);
+    font-weight: 700;
+}
+
+.rp-hero-banner .btn-primary:hover {
+    background: rgba(255, 255, 255, 0.9);
+    color: var(--rp-green-dark);
+}
+
+/* Filled stat blocks (used on the dashboard) */
+.rp-stat-fill {
+    background: linear-gradient(135deg, var(--rp-green) 0%, var(--rp-green-dark) 100%);
+    color: #fff;
+    border: none !important;
+}
+
+.rp-stat-fill p {
+    color: rgba(255, 255, 255, 0.85) !important;
+}
+
+.rp-stat-fill.rp-stat-gold {
+    background: linear-gradient(135deg, var(--rp-gold) 0%, var(--rp-gold-dark) 100%);
+}
+
+/* ============================================================
+   Site footer — every logged-in page ends on this instead of
+   trailing off into blank white space.
+   ============================================================ */
+.rp-footer {
+    background: linear-gradient(135deg, var(--rp-black) 0%, #24371a 100%);
+    border-top: 4px solid var(--rp-green);
+    color: rgba(255, 255, 255, 0.85);
+    padding: 40px 32px 22px;
+    margin-top: 32px;
+}
+
+.rp-footer h6 {
+    color: rgba(255, 255, 255, 0.55);
+    letter-spacing: 0.06em;
+}
+
+.rp-footer a {
+    color: rgba(255, 255, 255, 0.85);
+    text-decoration: none;
+}
+
+.rp-footer a:hover {
+    color: #fff;
+    text-decoration: underline;
+}
+
+.rp-footer hr {
+    border-color: rgba(255, 255, 255, 0.15);
+}
+
+.rp-footer .rp-footer-logo-badge {
+    background: #fff;
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 14px;
+    border-radius: 10px;
+}
+
+.rp-footer .rp-footer-logo {
+    height: 26px;
+}
+
+/* ============================================================
+   Hero photos — a couple of key pages get a real photo behind
+   the gradient (dashboard + browse) instead of a flat fill,
+   echoing rp.edu.sg's photo-driven hero sections. Photos are
+   Unsplash License (free for commercial use, no attribution
+   required), hotlinked the same way laptop model images already
+   are elsewhere in this project.
+   ============================================================ */
+.rp-hero-photo {
+    background-size: cover;
+    background-position: center;
+}
+
+.rp-hero-photo::before,
+.rp-hero-photo::after {
+    content: none;
+}
+
+.rp-hero-dash {
+    background-image:
+        linear-gradient(120deg, rgba(30, 58, 14, 0.90) 0%, rgba(20, 20, 18, 0.80) 100%),
+        url('https://images.unsplash.com/photo-1758270705290-62b6294dd044?auto=format&fit=crop&w=1600&q=70');
+}
+
+.rp-hero-browse {
+    background-image:
+        linear-gradient(120deg, rgba(30, 58, 14, 0.90) 0%, rgba(20, 20, 18, 0.80) 100%),
+        url('https://images.unsplash.com/photo-1758270705518-b61b40527e76?auto=format&fit=crop&w=1600&q=70');
+}
+
+.rp-hero-loans {
+    background-image:
+        linear-gradient(120deg, rgba(30, 58, 14, 0.90) 0%, rgba(20, 20, 18, 0.80) 100%),
+        url('https://images.unsplash.com/photo-1769794371055-54436b54577e?auto=format&fit=crop&w=1600&q=70');
+}
+
+.rp-hero-support {
+    background-image:
+        linear-gradient(120deg, rgba(30, 58, 14, 0.90) 0%, rgba(20, 20, 18, 0.80) 100%),
+        url('https://images.unsplash.com/photo-1758270705518-b61b40527e76?auto=format&fit=crop&w=1600&q=70');
 }

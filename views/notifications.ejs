@@ -8,11 +8,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
     <link rel="stylesheet" href="/css/style.css">
 </head>
-<body class="bg-light">
-
-<!-- =====================================================================
-     Devops-CA2 — Notifications page — Implemented by: Lin Htut Win
-     ===================================================================== -->
+<body class="rp-app-bg">
 
 <%- include("partials/navbar") %>
 
@@ -38,17 +34,8 @@
     <main class="flex-grow-1">
         <section class="bg-white border rounded-4 p-4">
             <div class="d-flex justify-content-between align-items-center mb-3">
-                <div class="d-flex align-items-center gap-2">
-                    <h4 class="fw-bold mb-0">Notifications</h4>
-                    <span class="badge bg-secondary rounded-pill"><%= notifications.length %></span>
-                </div>
-                <% if (notifications.length > 0) { %>
-                    <form action="/notifications/clear" method="POST" onsubmit="return confirm('Clear all notifications?');">
-                        <button type="submit" class="btn btn-sm btn-outline-danger">
-                            <i class="fa-solid fa-trash me-1"></i>Clear all
-                        </button>
-                    </form>
-                <% } %>
+                <h4 class="fw-bold mb-0">Notifications</h4>
+                <span class="badge bg-secondary rounded-pill"><%= notifications.length %></span>
             </div>
 
             <% if (notifications.length === 0) { %>
@@ -65,12 +52,6 @@
                                 <p class="mb-1"><%= n.message %></p>
                                 <small class="text-muted"><%= new Date(n.created_at).toLocaleString('en-SG') %></small>
                             </div>
-                            <form action="/notifications/<%= n.notification_id %>/delete" method="POST" class="flex-shrink-0"
-                                  onsubmit="return confirm('Delete this notification?');">
-                                <button type="submit" class="btn btn-sm btn-link text-muted p-0" title="Delete notification" aria-label="Delete notification">
-                                    <i class="fa-solid fa-trash"></i>
-                                </button>
-                            </form>
                         </li>
                     <% }); %>
                 </ul>
@@ -78,6 +59,8 @@
         </section>
     </main>
 </div>
+
+<%- include("partials/footer") %>
 
 </body>
 </html>
