@@ -15,6 +15,7 @@
     </form>
 
     <div class="d-flex align-items-center gap-3">
+        <!-- Implemented by: Lin Htut Win — notification bell -->
         <a href="/notifications" class="btn btn-light btn-sm rounded-circle border position-relative d-flex align-items-center justify-content-center" style="width:38px;height:38px;" title="Notifications">
             <i class="fa-regular fa-bell"></i>
             <% if (typeof unreadCount !== 'undefined' && unreadCount > 0) { %>
@@ -24,16 +25,13 @@
                 </span>
             <% } %>
         </a>
-        <button class="btn btn-light btn-sm rounded-circle border" style="width:38px;height:38px;">
-            <i class="fa-regular fa-envelope"></i>
-        </button>
+        <!-- Implemented by: Lin Htut Win — navbar profile (removed envelope icon + student ID) -->
         <div class="d-flex align-items-center gap-2">
             <div class="rounded-circle bg-success bg-opacity-10 text-success d-flex align-items-center justify-content-center" style="width:38px;height:38px;">
                 <i class="fa-solid fa-user"></i>
             </div>
             <div>
                 <div class="fw-semibold small"><%= student.name %></div>
-                <div class="text-muted" style="font-size:11px;"><%= student.id %></div>
             </div>
         </div>
         <!-- ==================================================

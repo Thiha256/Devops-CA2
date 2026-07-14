@@ -122,9 +122,15 @@
                                 <% } %>
                             </div>
                         </div>
-                        <div class="text-muted small text-end" style="max-width:200px;">
-                            <i class="fa-solid fa-circle-info me-1"></i>
-                            Return this laptop at the Resource Centre counter — staff will process it.
+                        <div class="text-end" style="max-width:220px;">
+                            <p class="text-muted small mb-2">
+                                <i class="fa-solid fa-circle-info me-1"></i>
+                                Return this laptop at the Resource Centre counter — staff will process it.
+                            </p>
+                            <!-- Implemented by: Lin Htut Win — PDF receipt download button -->
+                            <a href="/loans/<%= l.loan_id %>/receipt" class="btn btn-sm btn-outline-primary rounded-3">
+                                <i class="fa-solid fa-file-pdf me-1"></i>Download Receipt
+                            </a>
                         </div>
                     </div>
                 <% }); %>
@@ -143,7 +149,13 @@
                     <% pastLoans.slice(0, 3).forEach(function(l) { %>
                         <li class="list-group-item d-flex justify-content-between align-items-center px-0">
                             <span><%= l.modelName %> <span class="text-muted small">(borrowed <%= l.borrowLabel %> · returned <%= l.returnLabel %>)</span></span>
-                            <span class="badge bg-secondary rounded-pill">Returned</span>
+                            <span class="d-flex align-items-center gap-2">
+                                <!-- Implemented by: Lin Htut Win — PDF receipt download -->
+                                <a href="/loans/<%= l.loan_id %>/receipt" class="btn btn-sm btn-outline-primary rounded-3">
+                                    <i class="fa-solid fa-file-pdf me-1"></i>Receipt
+                                </a>
+                                <span class="badge bg-secondary rounded-pill">Returned</span>
+                            </span>
                         </li>
                     <% }); %>
                 </ul>
@@ -153,7 +165,12 @@
                             <% pastLoans.slice(3).forEach(function(l) { %>
                                 <li class="list-group-item d-flex justify-content-between align-items-center px-0">
                                     <span><%= l.modelName %> <span class="text-muted small">(borrowed <%= l.borrowLabel %> · returned <%= l.returnLabel %>)</span></span>
-                                    <span class="badge bg-secondary rounded-pill">Returned</span>
+                                    <span class="d-flex align-items-center gap-2">
+                                        <a href="/loans/<%= l.loan_id %>/receipt" class="btn btn-sm btn-outline-primary rounded-3">
+                                            <i class="fa-solid fa-file-pdf me-1"></i>Receipt
+                                        </a>
+                                        <span class="badge bg-secondary rounded-pill">Returned</span>
+                                    </span>
                                 </li>
                             <% }); %>
                         </ul>
