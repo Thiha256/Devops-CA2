@@ -86,6 +86,32 @@ async function getModelsForSchool(schoolName) {
     }));
 }
 
+// Total laptops currently "available" across every model assigned to a school.
+// Used for the student dashboard's "Available Devices" stat.
+async function getAvailableCountForSchool(schoolName) {
+    const [rows] = await db.execute(`
+        SELECT COUNT(DISTINCT l.laptop_id) AS available
+        FROM laptop l
+        JOIN school_has_laptop_model shlm ON shlm.model_id = l.model_id
+        JOIN school s ON s.school_id = shlm.school_id
+        WHERE l.status = 'available'
+        AND s.school_name = ?
+    `, [schoolName]);
+
+    return rows[0].available;
+}
+
+// Same, but every laptop regardless of school (used for admins viewing /home).
+async function getAvailableCountAll() {
+    const [rows] = await db.execute(`
+        SELECT COUNT(*) AS available
+        FROM laptop
+        WHERE status = 'available'
+    `);
+
+    return rows[0].available;
+}
+
 async function isModelAvailableToSchool(modelId, schoolName) {
     const [rows] = await db.execute(`
         SELECT lm.model_id
@@ -243,7 +269,14 @@ async function getLoansByUser(userId) {
     return rows.map(l => {
         const now = new Date();
         const due = new Date(l.due_date);
+        const borrow = new Date(l.borrow_date);
         const daysRemaining = Math.ceil((due - now) / (1000 * 60 * 60 * 24));
+
+        const totalMs = due - borrow;
+        const elapsedMs = now - borrow;
+        const percentElapsed = totalMs > 0
+            ? Math.min(100, Math.max(0, Math.round((elapsedMs / totalMs) * 100)))
+            : 100;
 
         return {
             ...l,
@@ -252,6 +285,7 @@ async function getLoansByUser(userId) {
             dueLabel: formatDate(l.due_date),
             returnLabel: l.return_date ? formatDate(l.return_date) : null,
             daysRemaining,
+            percentElapsed,
             overdue: !l.return_date && daysRemaining < 0
         };
     });
@@ -595,6 +629,8 @@ module.exports = {
     LOAN_REASONS,
     getAllModels,
     getModelsForSchool,
+    getAvailableCountForSchool,
+    getAvailableCountAll,
     createLoanRequest,
     getRequestsByUser,
     getAllRequests,

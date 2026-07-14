@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="/css/style.css">
 </head>
 
-<body class="bg-light">
+<body class="rp-app-bg">
 
 <!-- =====================================================================
      Devops-CA2 — Admin Profile (whole page + audit log) — Implemented by: Lin Htut Win
@@ -133,7 +133,7 @@
 
                 <% if (activity.length > 5) { %>
                     <div class="text-center mt-3">
-                        <button type="button" id="toggleLogs" class="btn btn-sm btn-link text-decoration-none text-secondary fw-semibold">
+                        <button type="button" id="toggleLogs" data-total="<%= activity.length %>" class="btn btn-sm btn-link text-decoration-none text-secondary fw-semibold">
                             <span id="toggleText">Show all <%= activity.length %> logs</span>
                             <i class="fa-solid fa-chevron-down ms-1" id="toggleIcon"></i>
                         </button>
@@ -147,7 +147,7 @@
             (function () {
                 const btn = document.getElementById('toggleLogs');
                 if (!btn) return;
-                const total = <%= activity.length %>;
+                const total = btn.getAttribute('data-total');
                 const extras = document.querySelectorAll('.log-extra');
                 const icon = document.getElementById('toggleIcon');
                 const text = document.getElementById('toggleText');
@@ -194,6 +194,8 @@
     </main>
 
 </div>
+
+<%- include("partials/adminFooter") %>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 

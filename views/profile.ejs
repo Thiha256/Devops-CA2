@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
     <link rel="stylesheet" href="/css/style.css">
 </head>
-<body class="bg-light">
+<body class="rp-app-bg">
 
 <%- include("partials/navbar") %>
 
@@ -18,11 +18,11 @@
     <main class="flex-grow-1">
 
         <!-- Page Header -->
-        <section class="bg-white border rounded-4 p-4 mb-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <section class="rp-hero-banner rp-hero-photo rp-hero-loans border rounded-4 p-4 mb-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
             <div>
-                <span class="text-success fw-bold text-uppercase small">Account</span>
+                <span class="rp-hero-eyebrow fw-bold text-uppercase small">Account</span>
                 <h2 class="fw-bold my-2">My Profile</h2>
-                <p class="text-muted mb-0" style="max-width:560px;">View and manage your personal and account details.</p>
+                <p class="mb-0" style="max-width:560px;">View and manage your personal and account details.</p>
             </div>
         </section>
 
@@ -94,28 +94,22 @@
                 <div class="bg-white border rounded-4 p-4">
                     <h4 class="fw-bold mb-3">Account Summary</h4>
                     <div class="row g-3">
-                        <div class="col-6 col-lg-3">
+                        <div class="col-6 col-lg-4">
                             <div class="bg-white border rounded-4 p-3 border-start border-success border-4">
                                 <h3 class="fw-bold mb-1"><%= stats.loans %></h3>
                                 <p class="text-muted small mb-0">Current Loans</p>
                             </div>
                         </div>
-                        <div class="col-6 col-lg-3">
+                        <div class="col-6 col-lg-4">
                             <div class="bg-white border rounded-4 p-3 border-start border-secondary border-4">
                                 <h3 class="fw-bold mb-1"><%= stats.available %></h3>
                                 <p class="text-muted small mb-0">Available Devices</p>
                             </div>
                         </div>
-                        <div class="col-6 col-lg-3">
+                        <div class="col-6 col-lg-4">
                             <div class="bg-white border rounded-4 p-3 border-start border-warning border-4">
-                                <h3 class="fw-bold mb-1"><%= stats.dueSoon %></h3>
-                                <p class="text-muted small mb-0">Due Soon</p>
-                            </div>
-                        </div>
-                        <div class="col-6 col-lg-3">
-                            <div class="bg-white border rounded-4 p-3 border-start border-danger border-4">
-                                <h3 class="fw-bold mb-1"><%= stats.penalties %></h3>
-                                <p class="text-muted small mb-0">Penalties</p>
+                                <h3 class="fw-bold mb-1"><%= loan ? loan.daysRemaining : "-" %></h3>
+                                <p class="text-muted small mb-0">Days Remaining</p>
                             </div>
                         </div>
                     </div>
@@ -125,6 +119,8 @@
         </section>
     </main>
 </div>
+
+<%- include("partials/footer") %>
 
 <!-- Edit Profile Modal -->
 <div class="modal fade" id="editProfileModal" tabindex="-1" aria-labelledby="editProfileLabel" aria-hidden="true">

@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
     <link rel="stylesheet" href="/css/style.css">
 </head>
-<body class="bg-light">
+<body class="rp-app-bg">
 
 <%- include("partials/navbar") %>
 
@@ -18,11 +18,11 @@
     <main class="flex-grow-1">
 
         <!-- Page Header -->
-        <section class="bg-white border rounded-4 p-4 mb-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <section class="rp-hero-banner rp-hero-photo rp-hero-support border rounded-4 p-4 mb-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
             <div>
-                <span class="text-success fw-bold text-uppercase small">Help Centre</span>
+                <span class="rp-hero-eyebrow fw-bold text-uppercase small">Help Centre</span>
                 <h2 class="fw-bold my-2">Support</h2>
-                <p class="text-muted mb-0" style="max-width:560px;">Need help with a booking, loan, or penalty? Reach out to us or check the FAQs below.</p>
+                <p class="mb-0" style="max-width:560px;">Need help with a booking or loan? Reach out to us or check the FAQs below.</p>
             </div>
         </section>
 
@@ -173,21 +173,32 @@
     </main>
 </div>
 
+<%- include("partials/footer") %>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const supportForm = document.getElementById('supportForm');
         if (supportForm) {
             supportForm.addEventListener('submit', function (event) {
-                const confirmed = window.confirm('Do you want to submit this support request?');
-                if (!confirmed) {
-                    event.preventDefault();
-                }
+                if (supportForm.dataset.rpConfirmed === '1') return;
+                event.preventDefault();
+
+                RP.confirm('Do you want to submit this support request?', {
+                    title: 'Submit request?',
+                    confirmLabel: 'Submit',
+                    danger: false
+                }).then(function (ok) {
+                    if (ok) {
+                        supportForm.dataset.rpConfirmed = '1';
+                        supportForm.submit();
+                    }
+                });
             });
         }
 
         <% if (submitted) { %>
-            window.alert('Your support request has been submitted successfully.');
+            RP.toast('Your support request has been submitted successfully.', 'success');
         <% } %>
     });
 </script>

@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
     <link rel="stylesheet" href="/css/style.css">
 </head>
-<body class="bg-light">
+<body class="rp-app-bg">
 
 <!-- =====================================================================
      Devops-CA2 — Notifications page — Implemented by: Lin Htut Win
@@ -43,6 +43,7 @@
                     <span class="badge bg-secondary rounded-pill"><%= notifications.length %></span>
                 </div>
                 <% if (notifications.length > 0) { %>
+                    <!-- Implemented by: Lin Htut Win — clear all notifications -->
                     <form action="/notifications/clear" method="POST" onsubmit="return confirm('Clear all notifications?');">
                         <button type="submit" class="btn btn-sm btn-outline-danger">
                             <i class="fa-solid fa-trash me-1"></i>Clear all
@@ -65,6 +66,7 @@
                                 <p class="mb-1"><%= n.message %></p>
                                 <small class="text-muted"><%= new Date(n.created_at).toLocaleString('en-SG') %></small>
                             </div>
+                            <!-- Implemented by: Lin Htut Win — delete a single notification -->
                             <form action="/notifications/<%= n.notification_id %>/delete" method="POST" class="flex-shrink-0"
                                   onsubmit="return confirm('Delete this notification?');">
                                 <button type="submit" class="btn btn-sm btn-link text-muted p-0" title="Delete notification" aria-label="Delete notification">
@@ -78,6 +80,8 @@
         </section>
     </main>
 </div>
+
+<%- include("partials/footer") %>
 
 </body>
 </html>

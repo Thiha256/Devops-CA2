@@ -2,7 +2,6 @@ const express = require("express");
 const path = require("path");
 const session = require("express-session");
 const bcrypt = require("bcryptjs");
-const PDFDocument = require("pdfkit");
 
 const { getUserByEmail } = require("./models/userModel");
 const { getModelsWithStats, getModelStatsById, deleteModel, getModelById, updateModel, createModel } = require("./models/laptopModel");
@@ -10,8 +9,10 @@ const { getAssetsByModel, createAsset, getAssetById, updateAsset, deleteAsset } 
 const loanModel = require("./models/loanModel");
 const reportModel = require("./models/reportModel");
 const notificationModel = require("./models/notificationModel");
-const auditModel = require("./models/auditModel");
 const { notifyUser } = require("./lib/notify");
+// Implemented by: Lin Htut Win — PDF loan receipts (pdfkit) + admin audit log
+const PDFDocument = require("pdfkit");
+const auditModel = require("./models/auditModel");
 
 const app = express();
 
@@ -56,19 +57,29 @@ const sampleProfile = {
     memberSince: "Jan 2025"
 };
 
-const stats = {
-    available: 125,
-    loans: 1,
-    penalties: 0,
-    dueSoon: 1
-};
+// Build the dashboard stats + "current loan" card from real data (replaces the
+// old hardcoded stats/loan objects). Used by both /home and /profile.
+async function getDashboardData(student) {
+    const loans = await loanModel.getLoansByUser(student.id);
+    const activeLoans = loans.filter(l => l.status === "active");
 
-const loan = {
-    device: "Lenovo ThinkPad X13",
-    dueDate: "30 June 2026",
-    status: "On Loan",
-    daysRemaining: 5
-};
+    // The loan card on the dashboard highlights whichever active loan is due
+    // soonest (most likely to need the student's attention).
+    const primaryLoan = activeLoans
+        .slice()
+        .sort((a, b) => a.daysRemaining - b.daysRemaining)[0] || null;
+
+    const available = student.role === "admin"
+        ? await loanModel.getAvailableCountAll()
+        : await loanModel.getAvailableCountForSchool(student.school);
+
+    const stats = {
+        available,
+        loans: activeLoans.length
+    };
+
+    return { stats, loan: primaryLoan };
+}
 
 // Build the `student` object templates expect, from the logged-in session user.
 // Any profile edits made via the Edit Profile modal are stored per-session in
@@ -158,7 +169,7 @@ app.post("/login/:role", async (req, res) => {
             school: user.school_name // admins have no school_id so this will be null for them
         };
 
-        // Record the sign-in in the audit trail.
+        // Record the sign-in in the audit trail. (Implemented by: Lin Htut Win)
         await auditModel.logAction(user.user_id, "login", "Signed in to the " + user.role + " portal");
 
         // admins land on the admin inventory page, students land on the dashboard.
@@ -176,7 +187,10 @@ app.get("/logout", (req, res) => {
 // ---------- Protected app routes ----------
 
 app.get("/home", requireLogin, async (req, res) => {
-    res.render("index", { title: "RP Resource Centre", page: "dashboard", student: currentStudent(req), stats, loan });
+    const student = currentStudent(req);
+    const { stats, loan } = await getDashboardData(student);
+
+    res.render("index", { title: "RP Resource Centre", page: "dashboard", student, stats, loan });
 });
 
 // Browse loanable laptop models. Admins see every model; students see only the
@@ -397,8 +411,6 @@ app.get('/admin/inventory/:id/assets/new', requireAdmin, async (req, res) => {
         model,
         asset_number: '',
         serial_no: '',
-        status: 'available',
-        maint_reason: '',
         error: null
     });
 });
@@ -406,10 +418,10 @@ app.get('/admin/inventory/:id/assets/new', requireAdmin, async (req, res) => {
 
 // Process creating new asset for a specific model
 app.post('/admin/inventory/:id/assets/new', requireAdmin, async (req, res) => {
-    const { asset_number, serial_no, status, maint_reason } = req.body;
+    const { asset_number, serial_no } = req.body;
     const asset_id = 'LAP' + asset_number.padStart(3, '0');
     try {
-        await createAsset(req.params.id, asset_id, serial_no, status, maint_reason);
+        await createAsset(req.params.id, asset_id, serial_no);
         await auditModel.logAction(req.session.user.id, "asset_add", `Added asset ${asset_id}`);
         res.redirect('/admin/inventory/' + req.params.id);
     } catch (err) {
@@ -425,8 +437,6 @@ app.post('/admin/inventory/:id/assets/new', requireAdmin, async (req, res) => {
             model,
             asset_number,
             serial_no,
-            status,
-            maint_reason,
             error: isDuplicate
                 ? 'That Asset ID or Serial Number is already in use.'
                 : 'Something went wrong adding this asset.'
@@ -560,6 +570,7 @@ app.post("/loans/request", requireLogin, async (req, res) => {
     }
 
     // (Lin Htut Win) notification trigger — request submitted
+    // Notify the student their request is in (in-app bell + n8n email).
     await notifyUser({
         userId: req.session.user.id,
         email: student.email,
@@ -737,6 +748,7 @@ app.post("/admin/loans/requests/:id/approve", requireAdmin, async (req, res) => 
     );
 
     // (Lin Htut Win) notification trigger — request approved
+    // Notify the student (not the admin) that their request was approved.
     if (result.ok && result.student) {
         await notifyUser({
             userId: result.student.userId,
@@ -764,6 +776,7 @@ app.post("/admin/loans/requests/:id/reject", requireAdmin, async (req, res) => {
     const result = await loanModel.rejectRequest(req.params.id, req.session.user.id, req.body.remarks);
 
     // (Lin Htut Win) notification trigger — request rejected
+    // Notify the student their request was rejected.
     if (result.ok && result.student) {
         await notifyUser({
             userId: result.student.userId,
@@ -884,7 +897,10 @@ app.get("/api/notifications/run-reminders", async (req, res) => {
 });
 
 app.get("/profile", requireLogin, async (req, res) => {
-    res.render("profile", { title: "Profile", page: "profile", student: currentStudent(req), stats, loan });
+    const student = currentStudent(req);
+    const { stats, loan } = await getDashboardData(student);
+
+    res.render("profile", { title: "Profile", page: "profile", student, stats, loan });
 });
 
 app.post("/profile", requireLogin, (req, res) => {
