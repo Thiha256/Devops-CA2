@@ -14,6 +14,28 @@ const { notifyUser } = require("./lib/notify");
 const PDFDocument = require("pdfkit");
 const auditModel = require("./models/auditModel");
 
+// =====================================================================
+//  LIN HTUT WIN'S FEATURES  —  what I built, and where each part lives
+//
+//    NOTIFICATIONS
+//      Navbar bell (unread count, every page)   middleware -> res.locals
+//      View all notifications                   GET  /notifications
+//      Delete one notification                  POST /notifications/:id/delete
+//      Clear all notifications                  POST /notifications/clear
+//
+//    n8n AUTOMATION
+//      Daily reminder endpoint (n8n cron)       GET  /api/notifications/run-reminders
+//      Event emails on loan actions             notifyUser() -> lib/notify.js -> n8n webhook
+//
+//    ADMIN AUDIT LOG  (admin profile page)
+//      Activity log + filter chips              GET  /admin/profile
+//      Logs every admin action                  auditModel.logAction()  (login / approve / reject /
+//                                               return / model + asset add + delete)
+//
+//    PDF RECEIPT
+//      Download a loan receipt (pdfkit)         GET  /loans/:id/receipt
+// =====================================================================
+
 const app = express();
 
 app.set("view engine", "ejs");
@@ -169,8 +191,11 @@ app.post("/login/:role", async (req, res) => {
             school: user.school_name // admins have no school_id so this will be null for them
         };
 
-        // Record the sign-in in the audit trail. (Implemented by: Lin Htut Win)
-        await auditModel.logAction(user.user_id, "login", "Signed in to the " + user.role + " portal");
+        // Record admin sign-ins in the audit trail. (Implemented by: Lin Htut Win)
+        // Only staff/admin logins are audited — this is an admin accountability log.
+        if (user.role === "admin") {
+            await auditModel.logAction(user.user_id, "login", "Signed in to the admin portal");
+        }
 
         // admins land on the admin inventory page, students land on the dashboard.
         return res.redirect(user.role === "admin" ? "/admin" : "/home");
@@ -942,8 +967,8 @@ app.get("/admin/profile", requireAdmin, async (req, res) => {
     const validFilters = ["logins", "decisions", "inventory"];
     const filter = validFilters.includes(req.query.filter) ? req.query.filter : "all";
 
-    const activity = await auditModel.getByUser(
-        req.session.user.id,
+    // Shared trail across all admins — each row shows which admin did the action.
+    const activity = await auditModel.getRecentAll(
         filter === "all" ? null : filter,
         100
     );
