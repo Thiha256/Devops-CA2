@@ -55,4 +55,29 @@ async function getByUser(userId, category, limit = 30) {
     return rows;
 }
 
-module.exports = { logAction, getByUser, CATEGORIES };
+// All recent admin actions across every admin (a shared accountability trail),
+// newest first. JOINs the user table so each row carries the admin's NAME — this
+// is what lets the log show *which* admin did *what*. Only admin-role actors are
+// included, so it stays a clean admin audit log. Optional category filter as above.
+async function getRecentAll(category, limit = 100) {
+    const lim = Number.isInteger(limit) && limit > 0 ? limit : 100;
+    const types = CATEGORIES[category];
+
+    const typeClause = types
+        ? `AND a.action_type IN (${types.map(() => "?").join(", ")})`
+        : "";
+    const params = types ? [...types] : [];
+
+    const [rows] = await db.execute(
+        `SELECT a.log_id, a.action_type, a.description, a.created_at, u.name AS admin_name
+         FROM audit_log a
+         JOIN user u ON u.user_id = a.user_id
+         WHERE u.role = 'admin' ${typeClause}
+         ORDER BY a.created_at DESC, a.log_id DESC
+         LIMIT ${lim}`,
+        params
+    );
+    return rows;
+}
+
+module.exports = { logAction, getByUser, getRecentAll, CATEGORIES };
