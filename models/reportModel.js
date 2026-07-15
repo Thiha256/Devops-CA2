@@ -15,6 +15,9 @@ function formatDateTime(d) {
     return new Date(d).toLocaleString("en-SG", { day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" });
 }
 
+// ======================================================
+// Reports Dashboard
+// ======================================================
 async function getSummaryStats() {
     const [[laptops]] = await db.execute(`
         SELECT
@@ -47,6 +50,9 @@ async function getSummaryStats() {
     };
 }
 
+// ======================================================
+// Most Requested Models Report
+// ======================================================
 async function getMostRequestedModels() {
     const [rows] = await db.execute(`
         SELECT
@@ -76,6 +82,9 @@ async function getMostRequestedModels() {
     }));
 }
 
+// ======================================================
+// Recent Decisions Report
+// ======================================================
 async function getRecentReviews() {
     const [rows] = await db.execute(`
         SELECT
@@ -103,6 +112,9 @@ async function getRecentReviews() {
     }));
 }
 
+// ======================================================
+// Overdue Loans Report
+// ======================================================
 async function getOverdueLoans() {
     const [rows] = await db.execute(`
         SELECT
@@ -127,6 +139,9 @@ async function getOverdueLoans() {
     }));
 }
 
+// ======================================================
+// Loans by School Report
+// ======================================================
 async function getLoansBySchool() {
     const [rows] = await db.execute(`
         SELECT
@@ -147,6 +162,9 @@ async function getLoansBySchool() {
     }));
 }
 
+// ======================================================
+// All Laptops Report
+// ======================================================
 async function getLaptopsByStatus(status) {
     const params = [];
     let where = "";

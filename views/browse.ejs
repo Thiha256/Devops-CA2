@@ -16,6 +16,9 @@
 
     <main class="flex-grow-1">
 
+        <!-- ============================================= -->
+        <!-- Browse Laptop Models -->
+        <!-- ============================================= -->
         <section class="rp-hero-banner rp-hero-photo rp-hero-browse border rounded-4 p-4 mb-4">
             <span class="rp-hero-eyebrow fw-bold text-uppercase small">Laptop Loans</span>
             <h2 class="fw-bold my-2">Browse Laptop Models</h2>
@@ -66,8 +69,14 @@
             <% const brands = [...new Set(models.map(m => m.name.split(" ")[0]))].sort(); %>
             <div class="d-flex align-items-center flex-wrap gap-2 mb-3" id="rpFilterChips">
                 <button type="button" class="btn btn-sm rounded-pill rp-chip active" data-filter-type="all">All Models</button>
+                <!-- ============================================= -->
+                <!-- Availability Filter -->
+                <!-- ============================================= -->
                 <button type="button" class="btn btn-sm rounded-pill rp-chip" data-filter-type="available">Available Now</button>
                 <span class="vr mx-1 d-none d-sm-inline"></span>
+                <!-- ============================================= -->
+                <!-- Brand Filter -->
+                <!-- ============================================= -->
                 <% brands.forEach(function(brand) { %>
                     <button type="button" class="btn btn-sm rounded-pill rp-chip" data-filter-type="brand" data-filter-value="<%= brand %>"><%= brand %></button>
                 <% }); %>

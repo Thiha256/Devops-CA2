@@ -428,15 +428,24 @@ app.get("/home", requireLogin, async (req, res) => {
 
 // Browse loanable laptop models. Admins see every model; students see only the
 // models available to their school. Supports a search query via ?q=.
+// ======================================================
+// Browse Laptop Models
+// ======================================================
 app.get("/browse", requireLogin, async (req, res) => {
     const student = currentStudent(req);
     const query = (req.query.q || "").trim();
     const q = query.toLowerCase();
 
+    // ======================================================
+    // School Filter
+    // ======================================================
     let models = student.role === "admin"
         ? await loanModel.getAllModels()
         : await loanModel.getModelsForSchool(student.school);
 
+    // ======================================================
+    // Search Laptop Models
+    // ======================================================
     if (q) {
         models = models.filter(m =>
             m.name.toLowerCase().includes(q) ||
@@ -759,6 +768,9 @@ app.post('/admin/inventory/:id/assets/:laptopId/edit', requireAdmin, async (req,
 
 // ---------- Admin: reports ----------
 
+// ======================================================
+// Reports Dashboard
+// ======================================================
 app.get('/admin/reports', requireAdmin, async (req, res) => {
     res.render('admin/adminReport', {
         page: 'reports',
@@ -771,6 +783,9 @@ app.get('/admin/reports', requireAdmin, async (req, res) => {
     });
 });
 
+// ======================================================
+// All Laptops Report
+// ======================================================
 app.get('/admin/reports/laptops', requireAdmin, async (req, res) => {
     const allowed = ['available', 'on loan', 'maintenance'];
     const status = allowed.includes(req.query.status) ? req.query.status : null;
