@@ -17,10 +17,11 @@ the server this prepares.
 ```
 ansible/
   ansible.cfg                     Ansible settings (inventory, roles path, sudo)
-  inventory/aws_prod              the target EC2 (IP + SSH key)
-  group_vars/
-    all.yml                       non-secret config (app dir, port, timezone, packages)
-    vault.yml                     ENCRYPTED secrets (Ansible Vault)
+  inventory/
+    aws_prod                      the target EC2 (IP + SSH key)
+    group_vars/all/
+      vars.yml                    non-secret config (app dir, port, timezone, packages)
+      vault.yml                   ENCRYPTED secrets (Ansible Vault)
   roles/
     common/                       base config + secure .env from Vault
       tasks/main.yml
@@ -56,9 +57,9 @@ ansible --version
 
 ## Set up your secrets (Ansible Vault)
 ```bash
-# 1. Put real values into group_vars/vault.yml, then encrypt it:
-ansible-vault encrypt group_vars/vault.yml
-# (edit later with:  ansible-vault edit group_vars/vault.yml)
+# 1. Put real values into inventory/group_vars/all/vault.yml, then encrypt it:
+ansible-vault encrypt inventory/group_vars/all/vault.yml
+# (edit later with:  ansible-vault edit inventory/group_vars/all/vault.yml)
 ```
 
 ## How to run

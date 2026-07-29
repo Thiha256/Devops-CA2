@@ -4,7 +4,7 @@
 #
 # These are PLACEHOLDERS. Steps:
 #   1. Replace each value with the real secret.
-#   2. Encrypt this file:   ansible-vault encrypt group_vars/vault.yml
+#   2. Encrypt this file:   ansible-vault encrypt inventory/group_vars/all/vault.yml
 #   3. Run playbooks with:  ansible-playbook playbooks/provision.yml --ask-vault-pass
 #
 # Once encrypted, this file is safe to commit (it becomes AES-256 ciphertext).
