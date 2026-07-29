@@ -15,6 +15,27 @@ function formatDate(d) {
     });
 }
 
+// Pure helper: work out a loan's progress (days remaining, % elapsed, overdue).
+// Used by the dashboard/analytics and covered by loan-logic.test.js.
+function computeLoanProgress(borrowDate, dueDate, returnDate, now = new Date()) {
+    const due = new Date(dueDate);
+    const borrow = new Date(borrowDate);
+    const daysRemaining = Math.ceil((due - now) / (1000 * 60 * 60 * 24));
+
+    const totalMs = due - borrow;
+    const elapsedMs = now - borrow;
+    const percentElapsed = totalMs > 0
+        ? Math.min(100, Math.max(0, Math.round((elapsedMs / totalMs) * 100)))
+        : 100;
+
+    return {
+        status: returnDate ? "returned" : "active",
+        daysRemaining,
+        percentElapsed,
+        overdue: !returnDate && daysRemaining < 0
+    };
+}
+
 async function getAllModels() {
     const [rows] = await db.execute(`
         SELECT
@@ -627,6 +648,8 @@ async function getLoanForReceipt(loanId, userId) {
 
 module.exports = {
     LOAN_REASONS,
+    formatDate,
+    computeLoanProgress,
     getAllModels,
     getModelsForSchool,
     getAvailableCountForSchool,
