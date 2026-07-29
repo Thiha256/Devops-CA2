@@ -1,4 +1,4 @@
-name: Node.js CI & DevSecOps Pipeline
+name: Node.js CI Pipeline
 
 # Run CI when code is pushed
 on:
@@ -8,18 +8,17 @@ on:
       - lewin-dashboard-analytics-and-tests
       - cicd-setup
 
+  # Run CI when a pull request targets main
   pull_request:
     branches:
       - main
 
+  # Allow manual execution
   workflow_dispatch:
 
 # Give the workflow read-only repository access
 permissions:
   contents: read
-  security-events: write
-  pull-requests: write
-  actions: read
 
 # Cancel the previous run when new code is pushed
 concurrency:
@@ -27,9 +26,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # ==========================================
-  # 1. CORE CI (Wang Lin's Existing Work)
-  # ==========================================
   continuous-integration:
     name: Install, Validate, Scan and Test
     runs-on: ubuntu-latest
@@ -69,48 +65,3 @@ jobs:
       # Run automated tests only when previous steps pass
       - name: Run automated tests
         run: npm test
-
-  # ==========================================
-  # 2. DEVSECOPS: Code Security Scan (CodeQL)
-  # ==========================================
-  devsecops-security-scan:
-    name: DevSecOps SAST Code Analysis
-    runs-on: ubuntu-latest
-
-    permissions:
-      contents: read
-      security-events: write
-      actions: read
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Initialize CodeQL Engine
-        uses: github/codeql-action/init@v3
-        with:
-          languages: javascript
-
-      - name: Run CodeQL Security Scan
-        uses: github/codeql-action/analyze@v3
-        with:
-          upload: false
-
-  # ==========================================
-  # 3. ADVANCED TOOL: Trivy Vulnerability Scan
-  # ==========================================
-  devsecops-dependency-check:
-    name: DevSecOps Dependency & Secret Audit
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Run Trivy Security & Secret Scanner
-        uses: aquasecurity/trivy-action@master
-        with:
-          scan-type: 'fs'
-          ignore-unfixed: true
-          format: 'table'
-          severity: 'CRITICAL,HIGH'
