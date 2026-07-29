@@ -24,6 +24,11 @@ async function checkPool(retriesLeft = 5) {
         console.error("Failed to connect to DB:", err.message);
     }
 }
-checkPool();
+// Only run the startup connectivity check when the app itself is being run
+// (node app.js). When a unit test merely imports a model, we skip it so the
+// pool doesn't open a lingering connection that keeps the test runner alive.
+if (require.main && require.main.filename && require.main.filename.endsWith("app.js")) {
+    checkPool();
+}
 
 module.exports = pool;

@@ -777,6 +777,8 @@ app.get('/admin/reports', requireAdmin, async (req, res) => {
         admin: req.session.user,
         stats: await reportModel.getSummaryStats(),
         topModels: await reportModel.getMostRequestedModels(),
+        mostBorrowed: await reportModel.getMostBorrowedModels(),
+        monthlyTrends: await reportModel.getMonthlyLoanTrends(),
         recentReviews: await reportModel.getRecentReviews(),
         overdueLoans: await reportModel.getOverdueLoans(),
         loansBySchool: await reportModel.getLoansBySchool()
