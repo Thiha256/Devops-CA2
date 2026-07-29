@@ -1,0 +1,13 @@
+# =====================================================================
+# Inventory — which server(s) Ansible provisions.
+# Implemented by: Lin Htut Win — DevOps component (Ansible / IaC)
+#
+#   ansible_host  = rp-loans-may.duckdns.org  (DuckDNS hostname auto-tracks the changing EC2 IP)
+#   ansible_ssh_private_key_file = ~/.ssh/rp-cicd-key.pem
+# =====================================================================
+[aws]
+rp-app ansible_host=rp-loans-may.duckdns.org ansible_ssh_private_key_file=~/.ssh/rp-cicd-key.pem
+
+[aws:vars]
+ansible_user=ubuntu
+ansible_python_interpreter=/usr/bin/python3

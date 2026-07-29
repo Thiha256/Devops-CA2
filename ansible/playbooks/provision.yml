@@ -1,0 +1,15 @@
+---
+# =====================================================================
+# SERVER SETUP (provisioning + configuration) — RP Resource Centre
+# Implemented by: Lin Htut Win — DevOps component (Ansible / IaC)
+#
+# Turns a fresh AWS EC2 (Ubuntu) into a fully configured, Docker-ready host:
+#   - common role : timezone, app user + directory, secure .env from Vault
+#   - docker role : Docker Engine + Docker Compose plugin
+# =====================================================================
+- name: Provision and configure the RP Resource Centre server
+  hosts: aws
+  become: true
+  roles:
+    - common
+    - docker

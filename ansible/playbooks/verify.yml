@@ -1,0 +1,61 @@
+---
+# =====================================================================
+# VERIFY PROVISIONING — RP Resource Centre
+# Implemented by: Lin Htut Win — DevOps component (Ansible / IaC)
+#
+# Confirms the server was provisioned correctly: Docker + Compose installed,
+# the Docker service running, and the configured app environment in place.
+# Checks the ENVIRONMENT (this component), not the running application.
+#
+# Run with:  ansible-playbook playbooks/verify.yml
+# =====================================================================
+- name: Verify the server environment
+  hosts: aws
+  become: true
+
+  tasks:
+    - name: Docker CLI is available
+      ansible.builtin.command: docker --version
+      register: r_docker
+      changed_when: false
+
+    - name: Docker Compose plugin is available
+      ansible.builtin.command: docker compose version
+      register: r_compose
+      changed_when: false
+
+    - name: Gather service facts
+      ansible.builtin.service_facts:
+
+    - name: Assert the Docker service is running
+      ansible.builtin.assert:
+        that:
+          - "'docker.service' in ansible_facts.services"
+          - "ansible_facts.services['docker.service'].state == 'running'"
+        fail_msg: "Docker service is NOT running"
+        success_msg: "Docker service is running"
+
+    - name: Check the application directory exists
+      ansible.builtin.stat:
+        path: "{{ app_dir }}"
+      register: r_dir
+
+    - name: Check the environment file exists
+      ansible.builtin.stat:
+        path: "{{ app_dir }}/.env"
+      register: r_env
+
+    - name: Assert the configured environment is in place
+      ansible.builtin.assert:
+        that:
+          - r_dir.stat.exists and r_dir.stat.isdir
+          - r_env.stat.exists
+        fail_msg: "App environment missing at {{ app_dir }}"
+        success_msg: "Configured environment present at {{ app_dir }}"
+
+    - name: Report the verified environment
+      ansible.builtin.debug:
+        msg:
+          - "PASS - {{ r_docker.stdout }}"
+          - "PASS - {{ r_compose.stdout }}"
+          - "PASS - environment configured at {{ app_dir }}"
