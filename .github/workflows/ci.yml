@@ -55,7 +55,6 @@ jobs:
     name: DevSecOps SAST Code Analysis
     runs-on: ubuntu-latest
 
-    # Explicit job-level permissions required for CodeQL
     permissions:
       contents: read
       security-events: write
@@ -72,6 +71,8 @@ jobs:
 
       - name: Run CodeQL Security Scan
         uses: github/codeql-action/analyze@v3
+        with:
+          upload: false
 
   # ==========================================
   # 3. ADVANCED TOOL: Trivy Vulnerability Scan
