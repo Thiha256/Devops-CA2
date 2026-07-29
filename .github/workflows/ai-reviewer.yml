@@ -1,3 +1,5 @@
+#hi hi test test'
+
 name: AI Code Reviewer
 
 on:
@@ -27,7 +29,7 @@ jobs:
       - name: Run Gemini PR Reviewer
         uses: petarzarkov/gemini-code-review-action@latest
         with:
-          model: gemini-2.5-flash
+          model: gemini-2.0-flash
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
