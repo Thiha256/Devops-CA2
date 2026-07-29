@@ -1,0 +1,33 @@
+name: AI Code Reviewer
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: "ai-reviewer-${{ github.ref }}"
+  cancel-in-progress: true
+
+jobs:
+  ai-code-reviewer:
+    name: DevSecOps AI PR Code Reviewer
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run Gemini PR Reviewer
+        uses: petarzarkov/gemini-code-review-action@latest
+        with:
+          model: gemini-2.5-flash
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
