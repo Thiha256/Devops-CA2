@@ -14,6 +14,8 @@
                 <i class="fa-solid fa-user-shield"></i>
             </div>
             <div>
+                <!-- admin.name comes from req.session.user (set at login in app.js),
+                     passed in as the `admin` local by every admin route's res.render() -->
                 <div class="fw-semibold small"><%= admin.name %></div>
             </div>
         </a>
