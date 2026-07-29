@@ -15,6 +15,28 @@ function formatDateTime(d) {
     return new Date(d).toLocaleString("en-SG", { day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" });
 }
 
+// Pure business logic (no DB access) — builds the last N calendar months,
+// ending at the current month, zero-filled with counts from a lookup map.
+// Extracted so the month-range/date math can be unit tested directly.
+function buildMonthRange(months, countsByMonth = new Map(), referenceDate = new Date()) {
+    const result = [];
+    const cursor = new Date(referenceDate);
+    cursor.setDate(1);
+    cursor.setMonth(cursor.getMonth() - (months - 1));
+
+    for (let i = 0; i < months; i++) {
+        const yearMonth = cursor.toISOString().slice(0, 7);
+        result.push({
+            yearMonth,
+            label: cursor.toLocaleDateString("en-SG", { month: "short", year: "numeric" }),
+            totalLoans: countsByMonth.get(yearMonth) || 0
+        });
+        cursor.setMonth(cursor.getMonth() + 1);
+    }
+
+    return result;
+}
+
 // ======================================================
 // Reports Dashboard
 // ======================================================
@@ -165,6 +187,48 @@ async function getLoansBySchool() {
 // ======================================================
 // All Laptops Report
 // ======================================================
+async function getMostBorrowedModels(limit = 6) {
+    // Distinct from getMostRequestedModels: this counts actual completed
+    // loan records (real borrow events), not pending/approved requests —
+    // i.e. "which models do students actually end up borrowing the most".
+    const [rows] = await db.execute(`
+        SELECT
+            lm.model_id,
+            CONCAT(lm.brand, ' ', lm.model_name) AS name,
+            COUNT(lo.loan_id) AS timesBorrowed
+        FROM laptop_model lm
+        JOIN laptop l ON l.model_id = lm.model_id
+        JOIN loan lo ON lo.laptop_id = l.laptop_id
+        GROUP BY lm.model_id, lm.brand, lm.model_name
+        HAVING COUNT(lo.loan_id) > 0
+        ORDER BY timesBorrowed DESC, name ASC
+        LIMIT ?
+    `, [limit]);
+
+    return rows.map(r => ({
+        ...r,
+        timesBorrowed: Number(r.timesBorrowed)
+    }));
+}
+
+async function getMonthlyLoanTrends(months = 6) {
+    // Loan volume per calendar month, for the last N months. Zero-filled
+    // (via buildMonthRange) so a month with no loans still shows as 0 on
+    // the chart instead of just being skipped.
+    const [rows] = await db.execute(`
+        SELECT
+            DATE_FORMAT(borrow_date, '%Y-%m') AS yearMonth,
+            COUNT(*) AS totalLoans
+        FROM loan
+        WHERE borrow_date >= DATE_SUB(CURDATE(), INTERVAL ? MONTH)
+        GROUP BY yearMonth
+        ORDER BY yearMonth ASC
+    `, [months - 1]);
+
+    const countsByMonth = new Map(rows.map(r => [r.yearMonth, Number(r.totalLoans)]));
+    return buildMonthRange(months, countsByMonth);
+}
+
 async function getLaptopsByStatus(status) {
     const params = [];
     let where = "";
@@ -207,8 +271,13 @@ async function getLaptopsByStatus(status) {
 }
 
 module.exports = {
+    formatDate,
+    formatDateTime,
+    buildMonthRange,
     getSummaryStats,
     getMostRequestedModels,
+    getMostBorrowedModels,
+    getMonthlyLoanTrends,
     getRecentReviews,
     getOverdueLoans,
     getLoansBySchool,
