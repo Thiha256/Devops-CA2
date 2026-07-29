@@ -6,11 +6,10 @@ SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,N
 
 -- -----------------------------------------------------
 -- Schema resource_centre_db
--- -----------------------------------------------------
-DROP SCHEMA IF EXISTS `resource_centre_db` ;
-
--- -----------------------------------------------------
--- Schema resource_centre_db
+-- Intentionally no DROP SCHEMA here: this script must be safe to rerun
+-- against a database that already has real data (e.g. production) without
+-- wiping it. Every CREATE below already uses IF NOT EXISTS, so rerunning
+-- is a no-op once the schema exists.
 -- -----------------------------------------------------
 CREATE SCHEMA IF NOT EXISTS `resource_centre_db` DEFAULT CHARACTER SET utf8 ;
 USE `resource_centre_db` ;

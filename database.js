@@ -11,11 +11,16 @@ const pool = mysql.createPool({
     queueLimit: 0
 });
 
-async function checkPool() {
+async function checkPool(retriesLeft = 5) {
     try {
         await pool.query("SELECT 1");
         console.log("Connection established on", process.env.DB_DATABASE);
     } catch (err) {
+        if (retriesLeft > 0) {
+            // DB container (e.g. MySQL running its init scripts) may still be starting up.
+            setTimeout(() => checkPool(retriesLeft - 1), 2000);
+            return;
+        }
         console.error("Failed to connect to DB:", err.message);
     }
 }
