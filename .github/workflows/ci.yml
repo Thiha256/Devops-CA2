@@ -1,4 +1,4 @@
-name: Node.js CI Pipeline
+name: Node.js CI & DevSecOps Pipeline
 
 on:
   push:
@@ -6,21 +6,24 @@ on:
       - main
       - development
       - cicd-setup
-
   pull_request:
     branches:
       - main
-
   workflow_dispatch:
 
 permissions:
   contents: read
+  security-events: write
+  pull-requests: write
 
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  # ==========================================
+  # 1. CORE CI (Wang Lin's Existing Work)
+  # ==========================================
   continuous-integration:
     name: Install, Validate and Test
     runs-on: ubuntu-latest
@@ -43,3 +46,41 @@ jobs:
 
       - name: Run automated tests
         run: npm test
+
+  # ==========================================
+  # 2. DEVSECOPS: Code Security Scan (CodeQL)
+  # ==========================================
+  devsecops-security-scan:
+    name: DevSecOps SAST Code Analysis
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL Engine
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript
+
+      - name: Run CodeQL Security Scan
+        uses: github/codeql-action/analyze@v3
+
+  # ==========================================
+  # 3. ADVANCED TOOL: Trivy Vulnerability Scan
+  # ==========================================
+  devsecops-dependency-check:
+    name: DevSecOps Dependency & Secret Audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run Trivy Security & Secret Scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          ignore-unfixed: true
+          format: 'table'
+          severity: 'CRITICAL,HIGH'
