@@ -1,0 +1,16 @@
+---
+# =====================================================================
+# ENCRYPTED SECRETS (Ansible Vault) — Implemented by: Lin Htut Win
+#
+# These are PLACEHOLDERS. Steps:
+#   1. Replace each value with the real secret.
+#   2. Encrypt this file:   ansible-vault encrypt inventory/group_vars/all/vault.yml
+#   3. Run playbooks with:  ansible-playbook playbooks/provision.yml --ask-vault-pass
+#
+# Once encrypted, this file is safe to commit (it becomes AES-256 ciphertext).
+# NEVER commit it while it still contains real secrets in plain text.
+# =====================================================================
+vault_db_password: "PUT_DB_PASSWORD_HERE"
+vault_cron_secret: "PUT_A_LONG_RANDOM_SECRET_HERE"
+vault_n8n_webhook_url: "PUT_YOUR_N8N_WEBHOOK_URL_HERE"
+vault_session_secret: "PUT_A_LONG_RANDOM_SECRET_HERE"

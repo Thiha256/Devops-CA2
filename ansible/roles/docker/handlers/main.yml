@@ -1,0 +1,7 @@
+---
+# Handler: only restarts Docker when a task actually changed something.
+# Implemented by: Lin Htut Win
+- name: Restart docker
+  ansible.builtin.service:
+    name: docker
+    state: restarted

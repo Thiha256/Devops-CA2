@@ -1,0 +1,35 @@
+---
+# =====================================================================
+# Role: common — base server configuration (idempotent).
+# Sets timezone, creates the app user + directory, and securely renders the
+# application's .env from Vault-encrypted secrets. This produces a fully
+# CONFIGURED environment that the deployment step then runs the app in.
+# Implemented by: Lin Htut Win
+# =====================================================================
+- name: Set the server timezone
+  ansible.builtin.timezone:
+    name: "{{ server_timezone }}"
+
+- name: Create a dedicated system user for the application
+  ansible.builtin.user:
+    name: "{{ app_user }}"
+    system: true
+    create_home: false
+    shell: /usr/sbin/nologin
+
+- name: Create the application directory
+  ansible.builtin.file:
+    path: "{{ app_dir }}"
+    state: directory
+    owner: "{{ app_user }}"
+    group: "{{ app_user }}"
+    mode: "0750"
+
+- name: Generate the application's environment file from encrypted secrets
+  ansible.builtin.template:
+    src: env.j2
+    dest: "{{ app_dir }}/.env"
+    owner: "{{ app_user }}"
+    group: "{{ app_user }}"
+    mode: "0640"
+  no_log: true   # never print secret values in the Ansible output

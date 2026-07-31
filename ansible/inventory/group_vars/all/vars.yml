@@ -1,0 +1,19 @@
+---
+# =====================================================================
+# Shared NON-SECRET configuration — one source of truth so the setup is
+# consistent and repeatable across every run. Implemented by: Lin Htut Win
+# =====================================================================
+# Application runtime environment on the server
+app_user: rpapp
+app_dir: /opt/rp-resource-centre
+app_port: 3001
+
+# Server locale
+server_timezone: Asia/Singapore
+
+# Docker packages installed during provisioning
+docker_packages:
+  - docker-ce
+  - docker-ce-cli
+  - containerd.io
+  - docker-compose-plugin
