@@ -62,6 +62,11 @@ jobs:
               # as well as every deploy after it.
               if [ ! -d .git ]; then
                 git init -q
+              fi
+
+              if git remote get-url origin >/dev/null 2>&1; then
+                git remote set-url origin https://github.com/Thiha256/Devops-CA2.git
+              else
                 git remote add origin https://github.com/Thiha256/Devops-CA2.git
               fi
 
