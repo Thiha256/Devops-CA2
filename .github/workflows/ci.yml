@@ -91,6 +91,19 @@ jobs:
       - name: Run automated tests
         run: npm test
 
+      # docker-compose.yml requires a .env file (env_file: .env), which is
+      # gitignored and never present on the CI runner
+      - name: Create .env for Docker Compose
+        run: |
+          cat <<EOF > .env
+          DB_HOST=$DB_HOST
+          DB_USER=$DB_USER
+          DB_PASSWORD=$DB_PASSWORD
+          DB_DATABASE=$DB_DATABASE
+          FINE_RATE_PER_DAY=$FINE_RATE_PER_DAY
+          DUE_SOON_DAYS=$DUE_SOON_DAYS
+          EOF
+
       # Check whether docker-compose.yml is valid
       - name: Validate Docker Compose
         run: docker compose config --quiet
