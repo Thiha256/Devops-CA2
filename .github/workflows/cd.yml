@@ -1,0 +1,76 @@
+name: CD Pipeline
+
+# Run after CI completes on the main branch
+on:
+  workflow_run:
+    workflows:
+      - Node.js CI Pipeline
+    types:
+      - completed
+    branches:
+      - main
+
+  # Allow you to test CD manually
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Prevent two deployments from running at the same time
+concurrency:
+  group: production-deployment
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to EC2
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    # Run when CI passes or when manually started
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+
+    steps:
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+
+          script: |
+            # Stop immediately when a command fails
+             set -e
+
+            # Enter the application directory prepared by Ansible
+            cd /opt/rp-resource-centre
+
+            # Download the latest main branch
+            sudo git fetch origin main
+
+            # Make the EC2 code exactly match GitHub main
+            sudo git reset --hard origin/main
+
+            # Rebuild and restart the application
+            sudo docker compose up -d --build --remove-orphans
+
+            # Display container status
+            sudo docker compose ps
+
+            # Wait for the application to respond
+            for attempt in $(seq 1 20); do
+              if curl --fail --silent http://localhost:3001/ > /dev/null; then
+                echo "Deployment successful"
+                exit 0
+              fi
+
+              echo "Waiting for the application to start..."
+              sleep 5
+            done
+
+            # Show logs when the application does not start
+            echo "Application health check failed"
+            sudo docker compose logs --no-color --tail=100
+            exit 1
