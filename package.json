@@ -25,5 +25,8 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs"
+  "type": "commonjs",
+  "devDependencies": {
+    "js-yaml": "^5.2.3"
+  }
 }
