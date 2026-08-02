@@ -49,6 +49,16 @@ jobs:
               # Enter the application directory prepared by Ansible
               cd /opt/rp-resource-centre
 
+              # First-time bootstrap: Ansible creates this directory but does
+              # NOT clone the repo (code checkout stays out of the provisioning
+              # lane). If there is no git repo here yet, initialise one pointing
+              # at origin so the fetch/reset below works on the very first deploy
+              # as well as every deploy after it.
+              if [ ! -d .git ]; then
+                git init -q
+                git remote add origin https://github.com/Thiha256/Devops-CA2.git
+              fi
+
               # Download the latest main branch
               git fetch origin main
 
