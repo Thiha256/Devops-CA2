@@ -78,4 +78,26 @@ async function createModel(brand, model_name, cpu, ram, storage, graphics_type, 
     return result.insertId;
 }
 
-module.exports = { getModelsWithStats, getModelStatsById, deleteModel, getModelById, updateModel, createModel };
+// >>> Implemented by: Lin Htut Win — low-stock inventory alert query <<<
+// Returns every laptop model whose number of 'available' units is at or below
+// `threshold`, so the scheduled n8n workflow can email an admin to restock.
+// COALESCE(...,0) makes a model with zero units count as 0 available (not NULL),
+// so brand-new / fully-loaned-out models are correctly flagged as low stock.
+async function getLowStockModels(threshold) {
+    const [rows] = await db.execute(`
+        SELECT
+            lm.model_id AS id,
+            CONCAT(lm.brand, ' ', lm.model_name) AS name,
+            COUNT(l.laptop_id) AS totalAssets,
+            COALESCE(SUM(l.status = 'available'), 0) AS available
+        FROM laptop_model lm
+        LEFT JOIN laptop l ON l.model_id = lm.model_id
+        GROUP BY lm.model_id
+        HAVING available <= ?
+        ORDER BY available ASC, name ASC`,
+        [threshold]
+    );
+    return rows;
+}
+
+module.exports = { getModelsWithStats, getModelStatsById, deleteModel, getModelById, updateModel, createModel, getLowStockModels };

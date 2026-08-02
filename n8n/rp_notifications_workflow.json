@@ -92,6 +92,73 @@
     },
     {
       "parameters": {
+        "rule": {
+          "interval": [
+            { "field": "days", "daysInterval": 1, "triggerAtHour": 8, "triggerAtMinute": 5 }
+          ]
+        }
+      },
+      "id": "node-schedule-stock",
+      "name": "Low-stock check (daily)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 720]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:3001/api/inventory/low-stock-alerts",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [ { "name": "token", "value": "change-me" } ]
+        },
+        "options": {}
+      },
+      "id": "node-http-stock",
+      "name": "Get low-stock models",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [460, 720]
+    },
+    {
+      "parameters": { "fieldToSplitOut": "notifications", "options": {} },
+      "id": "node-split-stock",
+      "name": "Split low-stock",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [680, 720]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "s1", "name": "email",   "value": "={{ $json.email }}", "type": "string" },
+            { "id": "s2", "name": "name",    "value": "={{ $json.name }}", "type": "string" },
+            { "id": "s3", "name": "message", "value": "={{ $json.message }}", "type": "string" },
+            { "id": "s4", "name": "subject", "value": "=RP Resource Centre - Low Stock Alert", "type": "string" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-set-lowstock",
+      "name": "Normalize low-stock alert",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [900, 720]
+    },
+    {
+      "parameters": {
+        "content": "Low inventory alert branch — added by Lin Htut Win.\nAddresses CA2 feedback: expand the n8n workflow to automate low inventory alerts.\nDaily schedule -> GET /api/inventory/low-stock-alerts (token = CRON_SECRET) -> emails the admin any models at/below LOW_STOCK_THRESHOLD.",
+        "height": 220,
+        "width": 460
+      },
+      "id": "node-sticky-lowstock",
+      "name": "Note - Low stock (Lin Htut Win)",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [220, 640]
+    },
+    {
+      "parameters": {
         "sendTo": "={{ $json.email }}",
         "subject": "={{ $json.subject }}",
         "emailType": "text",
@@ -102,7 +169,7 @@
       "name": "Send Email (Gmail)",
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.1,
-      "position": [1160, 320],
+      "position": [1160, 460],
       "credentials": {
         "gmailOAuth2": {
           "id": "REPLACE_WITH_YOUR_GMAIL_CREDENTIAL",
@@ -128,6 +195,18 @@
       "main": [ [ { "node": "Normalize reminder", "type": "main", "index": 0 } ] ]
     },
     "Normalize reminder": {
+      "main": [ [ { "node": "Send Email (Gmail)", "type": "main", "index": 0 } ] ]
+    },
+    "Low-stock check (daily)": {
+      "main": [ [ { "node": "Get low-stock models", "type": "main", "index": 0 } ] ]
+    },
+    "Get low-stock models": {
+      "main": [ [ { "node": "Split low-stock", "type": "main", "index": 0 } ] ]
+    },
+    "Split low-stock": {
+      "main": [ [ { "node": "Normalize low-stock alert", "type": "main", "index": 0 } ] ]
+    },
+    "Normalize low-stock alert": {
       "main": [ [ { "node": "Send Email (Gmail)", "type": "main", "index": 0 } ] ]
     }
   }
