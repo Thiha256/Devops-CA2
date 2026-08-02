@@ -12,7 +12,7 @@ app_port: 3001
 # When a laptop model's available units drop to/below this number, the
 # scheduled n8n workflow emails admin_alert_email to restock.
 low_stock_threshold: 2
-admin_alert_email: "admin@example.com"   # <-- set to the real admin inbox
+admin_alert_email: "linhtut989@gmail.com"   # <-- set to the real admin inbox
 
 # Server locale
 server_timezone: Asia/Singapore
