@@ -40,37 +40,40 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
 
+          # Run as one root shell so `cd` (a shell builtin, which `sudo`
+          # cannot run directly) persists for every command that follows
           script: |
-            # Stop immediately when a command fails
-             set -e
+            sudo bash -c '
+              set -e
 
-            # Enter the application directory prepared by Ansible
-            cd /opt/rp-resource-centre
+              # Enter the application directory prepared by Ansible
+              cd /opt/rp-resource-centre
 
-            # Download the latest main branch
-            sudo git fetch origin main
+              # Download the latest main branch
+              git fetch origin main
 
-            # Make the EC2 code exactly match GitHub main
-            sudo git reset --hard origin/main
+              # Make the EC2 code exactly match GitHub main
+              git reset --hard origin/main
 
-            # Rebuild and restart the application
-            sudo docker compose up -d --build --remove-orphans
+              # Rebuild and restart the application
+              docker compose up -d --build --remove-orphans
 
-            # Display container status
-            sudo docker compose ps
+              # Display container status
+              docker compose ps
 
-            # Wait for the application to respond
-            for attempt in $(seq 1 20); do
-              if curl --fail --silent http://localhost:3001/ > /dev/null; then
-                echo "Deployment successful"
-                exit 0
-              fi
+              # Wait for the application to respond
+              for attempt in $(seq 1 20); do
+                if curl --fail --silent http://localhost:3001/ > /dev/null; then
+                  echo "Deployment successful"
+                  exit 0
+                fi
 
-              echo "Waiting for the application to start..."
-              sleep 5
-            done
+                echo "Waiting for the application to start..."
+                sleep 5
+              done
 
-            # Show logs when the application does not start
-            echo "Application health check failed"
-            sudo docker compose logs --no-color --tail=100
-            exit 1
+              # Show logs when the application does not start
+              echo "Application health check failed"
+              docker compose logs --no-color --tail=100
+              exit 1
+            '
