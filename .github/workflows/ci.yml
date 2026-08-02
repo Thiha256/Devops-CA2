@@ -21,7 +21,7 @@ on:
 permissions:
   contents: read
 
-# Cancel the previous run when newer code is pushed
+# Cancel the previous CI run when newer code is pushed
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -39,8 +39,9 @@ jobs:
       DB_USER: root
       DB_DATABASE: resource_centre_db
 
-      # Get the temporary CI password from GitHub Secrets
+      # Temporary CI database password from GitHub Secrets
       DB_PASSWORD: ${{ secrets.CI_DB_PASSWORD }}
+
       # Non-sensitive application settings
       FINE_RATE_PER_DAY: "1"
       DUE_SOON_DAYS: "2"
@@ -57,20 +58,15 @@ jobs:
           node-version: "20"
           cache: npm
 
-      # Check whether the required GitHub Secrets exist
-      - name: Check required GitHub Secrets
+      # Check whether the required database secret exists
+      - name: Check required GitHub Secret
         run: |
           if [ -z "${DB_PASSWORD:-}" ]; then
             echo "::error::CI_DB_PASSWORD is missing from GitHub Secrets"
             exit 1
           fi
 
-          if [ -z "${CRON_SECRET:-}" ]; then
-            echo "::error::CI_CRON_SECRET is missing from GitHub Secrets"
-            exit 1
-          fi
-
-          echo "Required GitHub Secrets are available"
+          echo "Required GitHub Secret is available"
 
       # Install exact dependency versions from package-lock.json
       - name: Install dependencies
@@ -103,17 +99,9 @@ jobs:
       - name: Build Docker image
         run: docker compose build app
 
-      # Confirm that the Docker image exists
-      - name: Check Docker image
-        run: docker image inspect resource-centre-app:latest
-
       # Start the Node.js and MySQL containers
       - name: Start Docker Compose services
         run: docker compose up -d
-
-      # Show the container statuses
-      - name: Check running containers
-        run: docker compose ps
 
       # Test whether the containerised application is working
       - name: Test containerised application
@@ -131,7 +119,7 @@ jobs:
           echo "::error::Application failed to start"
           exit 1
 
-      # Show logs when a previous step fails
+      # Show Docker logs when a previous step fails
       - name: Show Docker logs
         if: failure()
         run: docker compose logs --no-color
@@ -140,6 +128,4 @@ jobs:
       - name: Stop Docker Compose services
         if: always()
         run: docker compose down -v
-
-
 
