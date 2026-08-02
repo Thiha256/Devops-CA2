@@ -1,6 +1,7 @@
 name: CD Pipeline
 
-# Run after CI completes on the main branch
+# Run CD after the CI workflow finishes,
+# or allow manual execution from the Actions page
 on:
   workflow_run:
     workflows:
@@ -10,9 +11,9 @@ on:
     branches:
       - main
 
-  # Allow you to test CD manually
   workflow_dispatch:
 
+# CD only needs permission to read the repository
 permissions:
   contents: read
 
@@ -23,54 +24,89 @@ concurrency:
 
 jobs:
   deploy:
-    name: Deploy to EC2
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
+    name: Deploy Application to EC2
 
-    # Run when CI passes or when manually started
+    # Automatic deployment:
+    # Run only when CI succeeds.
+    #
+    # Manual deployment:
+    # Run when workflow_dispatch is selected.
     if: >
       github.event_name == 'workflow_dispatch' ||
       github.event.workflow_run.conclusion == 'success'
 
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
     steps:
-      - name: Deploy over SSH
-        uses: appleboy/ssh-action@v1.0.3
+      - name: Connect to EC2 and deploy
+        uses: appleboy/ssh-action@v1
+
         with:
+          # Only the hostname—do not include tcp://, http:// or /
           host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
+
+          # Usually "ubuntu" for an Ubuntu EC2 instance
+          username: ${{ secrets.EC2_USERNAME }}
+
+          # Complete contents of your private SSH key
           key: ${{ secrets.EC2_SSH_KEY }}
 
+          # Standard SSH port
+          port: 22
+
+          # Connection and deployment time limits
+          timeout: 30s
+          command_timeout: 10m
+
           script: |
-            # Stop immediately when a command fails
-             set -e
+            # Stop the deployment immediately if a command fails
+            set -e
 
-            # Enter the application directory prepared by Ansible
-            cd /opt/rp-resource-centre
+            # Location prepared by Ansible
+            APP_DIR="/opt/rp-resource-centre"
 
-            # Download the latest main branch
+            echo "======================================"
+            echo "Starting CD deployment"
+            echo "======================================"
+
+            echo "Opening application directory..."
+            cd "$APP_DIR"
+
+            echo "Downloading the latest main branch..."
             sudo git fetch origin main
 
-            # Make the EC2 code exactly match GitHub main
+            echo "Updating EC2 code to match GitHub main..."
             sudo git reset --hard origin/main
 
-            # Rebuild and restart the application
+            echo "Rebuilding and restarting Docker containers..."
             sudo docker compose up -d --build --remove-orphans
 
-            # Display container status
+            echo "Current Docker container status:"
             sudo docker compose ps
 
-            # Wait for the application to respond
+            echo "Waiting for the application to start..."
+
             for attempt in $(seq 1 20); do
               if curl --fail --silent http://localhost:3001/ > /dev/null; then
+                echo "======================================"
                 echo "Deployment successful"
+                echo "======================================"
                 exit 0
               fi
 
-              echo "Waiting for the application to start..."
+              echo "Attempt $attempt of 20: application is not ready yet"
               sleep 5
             done
 
-            # Show logs when the application does not start
+            echo "======================================"
             echo "Application health check failed"
+            echo "======================================"
+
+            echo "Container status:"
+            sudo docker compose ps
+
+            echo "Recent container logs:"
             sudo docker compose logs --no-color --tail=100
+
             exit 1
