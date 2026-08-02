@@ -49,6 +49,12 @@ jobs:
               # Enter the application directory prepared by Ansible
               cd /opt/rp-resource-centre
 
+              # This directory is owned by rpapp (set by Ansible), but this
+              # script runs as root. Since git v2.35.2, git refuses to run
+              # git commands inside a repo it does not own unless the owner
+              # is explicitly trusted, so tell it root is allowed here.
+              git config --global --add safe.directory /opt/rp-resource-centre
+
               # First-time bootstrap: Ansible creates this directory but does
               # NOT clone the repo (code checkout stays out of the provisioning
               # lane). If there is no git repo here yet, initialise one pointing
