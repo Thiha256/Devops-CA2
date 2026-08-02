@@ -8,6 +8,12 @@ app_user: rpapp
 app_dir: /opt/rp-resource-centre
 app_port: 3001
 
+# Low inventory alert (n8n automation) — non-secret config.
+# When a laptop model's available units drop to/below this number, the
+# scheduled n8n workflow emails admin_alert_email to restock.
+low_stock_threshold: 2
+admin_alert_email: "admin@example.com"   # <-- set to the real admin inbox
+
 # Server locale
 server_timezone: Asia/Singapore
 

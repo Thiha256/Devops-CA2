@@ -4,7 +4,7 @@ const session = require("express-session");
 const bcrypt = require("bcryptjs");
 
 const { getUserByEmail } = require("./models/userModel");
-const { getModelsWithStats, getModelStatsById, deleteModel, getModelById, updateModel, createModel } = require("./models/laptopModel");
+const { getModelsWithStats, getModelStatsById, deleteModel, getModelById, updateModel, createModel, getLowStockModels } = require("./models/laptopModel");
 const { getAssetsByModel, createAsset, getAssetById, updateAsset, deleteAsset } = require("./models/assetModel");
 const loanModel = require("./models/loanModel");
 const reportModel = require("./models/reportModel");
@@ -25,6 +25,7 @@ const auditModel = require("./models/auditModel");
 //
 //    n8n AUTOMATION
 //      Daily reminder endpoint (n8n cron)       GET  /api/notifications/run-reminders
+//      Low-stock alert endpoint (n8n cron)      GET  /api/inventory/low-stock-alerts
 //      Event emails on loan actions             notifyUser() -> lib/notify.js -> n8n webhook
 //
 //    ADMIN AUDIT LOG  (admin profile page)
@@ -45,7 +46,7 @@ app.use(express.static(path.join(__dirname, "public")));
 app.use(express.urlencoded({ extended: true }));
 
 app.use(session({
-    secret: "rp-resource-centre-secret",
+    secret: process.env.SESSION_SECRET || "dev-only-insecure-secret",
     resave: false,
     saveUninitialized: false,
     cookie: { maxAge: 1000 * 60 * 60 }
@@ -963,6 +964,45 @@ app.get("/api/notifications/run-reminders", async (req, res) => {
     }
 
     res.json({ count: sent.length, notifications: sent });
+});
+
+// >>> Implemented by: Lin Htut Win — low inventory alert (n8n automation) <<<
+// Endpoint the scheduled n8n workflow calls (daily). It finds laptop models at
+// or below LOW_STOCK_THRESHOLD and returns ONE admin notification summarising
+// them, so n8n can email the admin to restock. Addresses the CA2 feedback to
+// expand the workflow to automate events such as low inventory alerts.
+// Protected by the same CRON_SECRET as the reminder endpoint.
+app.get("/api/inventory/low-stock-alerts", async (req, res) => {
+    const token = req.query.token || req.get("x-cron-token");
+    if (!process.env.CRON_SECRET || token !== process.env.CRON_SECRET) {
+        return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const threshold = Number(process.env.LOW_STOCK_THRESHOLD) || 2;
+    const adminEmail = process.env.ADMIN_ALERT_EMAIL;
+    const lowModels = await getLowStockModels(threshold);
+
+    // Nothing low (or no admin recipient configured) -> return empty so the
+    // n8n "Split" node yields no items and no email is sent.
+    if (lowModels.length === 0 || !adminEmail) {
+        return res.json({ count: 0, notifications: [] });
+    }
+
+    const lines = lowModels
+        .map(m => `- ${m.name}: ${m.available} available (of ${m.totalAssets} total)`)
+        .join("\n");
+    const message =
+        `The following laptop model(s) are at or below the low-stock threshold of ${threshold}:\n\n` +
+        `${lines}\n\nPlease review and arrange restocking as needed.`;
+
+    // One aggregated notification -> admin gets a single summary email, not one
+    // per model. Same {email,name,type,message} shape the n8n workflow expects.
+    res.json({
+        count: lowModels.length,
+        notifications: [
+            { email: adminEmail, name: "Admin", type: "low_stock_alert", message }
+        ]
+    });
 });
 
 app.get("/profile", requireLogin, async (req, res) => {
