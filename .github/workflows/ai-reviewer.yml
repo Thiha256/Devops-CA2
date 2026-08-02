@@ -1,3 +1,5 @@
+#hi hi test test'
+
 name: AI Code Reviewer
 
 on:
@@ -27,8 +29,9 @@ jobs:
       - name: Run Gemini PR Reviewer
         uses: petarzarkov/gemini-code-review-action@latest
         with:
-          # Switched to 1.5-flash for the highest free-tier quota limits
-          model: gemini-1.5-flash
+          model: gemini-2.5-flash
+          # Exclude heavy files to prevent TPM quota depletion
+          exclude: '*.json,package-lock.json,*.md,*.yml,*.yaml,node_modules/**'
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
