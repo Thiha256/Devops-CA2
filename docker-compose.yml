@@ -10,7 +10,9 @@ services:
       DB_HOST: db
     depends_on:
       db:
-        condition: service_healthy
+        # Do not block `docker compose up -d` while MySQL completes its
+        # health checks. CI separately waits for the app HTTP endpoint.
+        condition: service_started
     restart: unless-stopped
 
   db:
