@@ -43,7 +43,7 @@ ansible/
 - **`verify.yml`** proves the environment is correct — the functionality check.
 
 ## Prerequisites
-1. A running **AWS EC2** instance (Ubuntu, e.g. `t3.micro` Free Tier), security
+1. A running **AWS EC2** instance (Ubuntu, e.g. `t3.small` Free Tier), security
    group allowing inbound **SSH (22)**.
 2. The **`.pem` SSH key** from AWS.
 3. **Ansible on Linux** — it does not run natively on Windows; use **WSL**.
