@@ -19,7 +19,7 @@
   "scripts": {
     "start": "node app.js",
     "dev": "nodemon app.js",
-    "check": "node --check app.js && node --check database.js && node --check models/assetModel.js && node --check models/auditModel.js && node --check models/laptopModel.js && node --check models/loanModel.js && node --check models/notificationModel.js && node --check models/reportModel.js && node --check models/userModel.js && node --check lib/n8n.js && node --check lib/notify.js",
+    "check": "node --check app.js && node --check database.js && node --check models/assetModel.js && node --check models/auditModel.js && node --check models/laptopModel.js && node --check models/loanModel.js && node --check models/notificationModel.js && node --check models/reportModel.js && node --check models/userModel.js && node --check lib/n8n.js && node --check lib/notify.js && node --check ai_review_demo.js && node --check public/js/rp-ui.js && node --check test/auth.test.js && node --check test/dashboard-analytics.test.js && node --check test/docker-cicd-config.test.js && node --check test/loan-logic.test.js && node --check test/smoke.test.js",
     "test": "node --test"
   },
   "keywords": [],
