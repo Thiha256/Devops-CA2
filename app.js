@@ -51,15 +51,10 @@ const useDbSessions = !!process.env.VERCEL || process.env.SESSION_STORE === "mys
 let sessionStore;
 if (useDbSessions) {
     const MySQLStore = require("express-mysql-session")(session);
-    sessionStore = new MySQLStore({
-        host: process.env.DB_HOST || process.env.MYSQLHOST,
-        port: Number(process.env.DB_PORT || process.env.MYSQLPORT || 3306),
-        user: process.env.DB_USER || process.env.MYSQLUSER,
-        password: process.env.DB_PASSWORD || process.env.MYSQLPASSWORD,
-        database: process.env.DB_DATABASE || "resource_centre_db",
-        ssl: process.env.DB_SSL === "true" ? { rejectUnauthorized: true } : undefined,
-        createDatabaseTable: false // made by scripts/init-db.js
-    });
+    // Reuse the app's own pool from database.js, which already has the
+    // TLS (DB_SSL) settings TiDB Cloud requires. A pool created by the store
+    // itself would drop the ssl option and be refused.
+    sessionStore = new MySQLStore({ createDatabaseTable: false }, require("./database"));
 
     // Vercel doesn't run the Dockerfile, so create the tables on the first request instead
     const initDb = require("./scripts/init-db");
