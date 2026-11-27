@@ -45,8 +45,40 @@ app.set("views", path.join(__dirname, "views"));
 app.use(express.static(path.join(__dirname, "public")));
 app.use(express.urlencoded({ extended: true }));
 
+// On Vercel each request can run in a different copy of the app, so logins
+// must be kept in MySQL instead of in memory. Locally / on EC2 nothing changes.
+const useDbSessions = !!process.env.VERCEL || process.env.SESSION_STORE === "mysql";
+let sessionStore;
+if (useDbSessions) {
+    const MySQLStore = require("express-mysql-session")(session);
+    sessionStore = new MySQLStore({
+        host: process.env.DB_HOST || process.env.MYSQLHOST,
+        port: Number(process.env.DB_PORT || process.env.MYSQLPORT || 3306),
+        user: process.env.DB_USER || process.env.MYSQLUSER,
+        password: process.env.DB_PASSWORD || process.env.MYSQLPASSWORD,
+        database: process.env.DB_DATABASE || "resource_centre_db",
+        ssl: process.env.DB_SSL === "true" ? { rejectUnauthorized: true } : undefined,
+        createDatabaseTable: false // made by scripts/init-db.js
+    });
+
+    // Vercel doesn't run the Dockerfile, so create the tables on the first request instead
+    const initDb = require("./scripts/init-db");
+    let ready = null;
+    app.use(async (req, res, next) => {
+        try {
+            if (!ready) ready = initDb();
+            await ready;
+        } catch (err) {
+            console.error("init-db failed:", err.message);
+            ready = null;
+        }
+        next();
+    });
+}
+
 app.use(session({
     secret: process.env.SESSION_SECRET || "dev-only-insecure-secret",
+    store: sessionStore,
     resave: false,
     saveUninitialized: false,
     cookie: { maxAge: 1000 * 60 * 60 }
@@ -1065,7 +1097,14 @@ app.get("/admin/profile", requireAdmin, async (req, res) => {
     });
 });
 const PORT = 3001;
+// Hosts like Railway pass their own port in process.env.PORT
+const LISTEN_PORT = process.env.PORT || PORT;
 
-app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-});
+// On Vercel the platform runs the app itself, so only listen everywhere else
+if (!process.env.VERCEL) {
+    app.listen(LISTEN_PORT, () => {
+        console.log(`Server running on http://localhost:${LISTEN_PORT}`);
+    });
+}
+
+module.exports = app;

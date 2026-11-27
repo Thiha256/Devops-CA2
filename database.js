@@ -2,10 +2,14 @@ require("dotenv").config();
 const mysql = require("mysql2/promise");
 
 const pool = mysql.createPool({
-    host: process.env.DB_HOST,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_DATABASE,
+    // DB_* is used locally / on EC2; MYSQL* is what Railway's MySQL service provides
+    host: process.env.DB_HOST || process.env.MYSQLHOST,
+    port: Number(process.env.DB_PORT || process.env.MYSQLPORT || 3306),
+    user: process.env.DB_USER || process.env.MYSQLUSER,
+    password: process.env.DB_PASSWORD || process.env.MYSQLPASSWORD,
+    database: process.env.DB_DATABASE || "resource_centre_db",
+    // Cloud MySQL hosts (TiDB Cloud, Aiven...) need DB_SSL=true
+    ssl: process.env.DB_SSL === "true" ? { rejectUnauthorized: true } : undefined,
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0
@@ -14,7 +18,7 @@ const pool = mysql.createPool({
 async function checkPool(retriesLeft = 5) {
     try {
         await pool.query("SELECT 1");
-        console.log("Connection established on", process.env.DB_DATABASE);
+        console.log("Connection established on", process.env.DB_DATABASE || "resource_centre_db");
     } catch (err) {
         if (retriesLeft > 0) {
             // DB container (e.g. MySQL running its init scripts) may still be starting up.
